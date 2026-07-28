@@ -206,6 +206,7 @@ export const InvoicesPaymentsView: React.FC<InvoicesPaymentsViewProps> = ({ lead
   const [invoiceAmount, setInvoiceAmount] = useState('$5,800.00');
   const [totalScope, setTotalScope] = useState('$14,500.00');
   const [paymentMethod, setPaymentMethod] = useState('💳 Credit Card (Stripe Instant Payout)');
+  const [paymentReference, setPaymentReference] = useState('');
   const [showInvoiceForm, setShowInvoiceForm] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
 
@@ -214,6 +215,12 @@ export const InvoicesPaymentsView: React.FC<InvoicesPaymentsViewProps> = ({ lead
   const handleCreateInvoice = async () => {
     if (!selectedLead) {
       showToast('⚠️ Please select a lead to invoice!', 'warning');
+      return;
+    }
+    const amount = Number(invoiceAmount.replace(/[$,\s]/g, ''));
+    const scope = Number(totalScope.replace(/[$,\s]/g, ''));
+    if (!invoiceDesc.trim() || !Number.isFinite(amount) || amount <= 0 || !Number.isFinite(scope) || scope <= 0 || amount > scope) {
+      showToast('Enter a description and valid amounts; the invoice cannot exceed the total scope.', 'warning');
       return;
     }
     try {
@@ -228,7 +235,8 @@ export const InvoicesPaymentsView: React.FC<InvoicesPaymentsViewProps> = ({ lead
         due_date: new Date(Date.now() + 3 * 86400000).toLocaleDateString()
       };
       const res = await api.createInvoice(payload);
-      const createdInv = res && res.invoice ? res.invoice : { ...payload, id: `INV-${Date.now()}`, status: 'Sent / Pending Insurance Check' };
+      if (!res?.invoice) throw new Error('Invoice was not confirmed by the server');
+      const createdInv = res.invoice;
       setInvoices(prev => [createdInv, ...prev]);
       showToast(`➕ Real invoice generated & sent to ${selectedLead.full_name}!`, 'success');
       setShowInvoiceForm(false);
@@ -242,6 +250,11 @@ export const InvoicesPaymentsView: React.FC<InvoicesPaymentsViewProps> = ({ lead
       showToast('⚠️ Please select a lead to record payment for!', 'warning');
       return;
     }
+    const amount = Number(invoiceAmount.replace(/[$,\s]/g, ''));
+    if (!Number.isFinite(amount) || amount <= 0 || !paymentReference.trim()) {
+      showToast('Enter a valid payment amount and a check or transaction reference.', 'warning');
+      return;
+    }
     try {
       const payload = {
         lead_id: selectedLead.id,
@@ -249,10 +262,11 @@ export const InvoicesPaymentsView: React.FC<InvoicesPaymentsViewProps> = ({ lead
         payment_date: new Date().toLocaleDateString(),
         method: paymentMethod,
         amount: invoiceAmount,
-        reference: `INV-2026 • Recorded from CRM`
+        reference: paymentReference.trim()
       };
       const res = await api.createPayment(payload);
-      const createdPay = res && res.payment ? res.payment : { ...payload, id: `PAY-${Date.now()}`, status: 'Completed' };
+      if (!res?.payment) throw new Error('Payment was not confirmed by the server');
+      const createdPay = res.payment;
       setPayments(prev => [createdPay, ...prev]);
       showToast(`💳 Real payment of ${invoiceAmount} recorded for ${selectedLead.full_name}!`, 'success');
       setShowPaymentForm(false);
@@ -396,6 +410,17 @@ export const InvoicesPaymentsView: React.FC<InvoicesPaymentsViewProps> = ({ lead
                 value={invoiceAmount}
                 onChange={(e) => setInvoiceAmount(e.target.value)}
                 placeholder="$5,800.00"
+              />
+            </div>
+
+            <div>
+              <label className="input-label">Check / Transaction Reference</label>
+              <input
+                type="text"
+                className="input-field"
+                value={paymentReference}
+                onChange={(e) => setPaymentReference(e.target.value)}
+                placeholder="Check #1042 or provider transaction ID"
               />
             </div>
 

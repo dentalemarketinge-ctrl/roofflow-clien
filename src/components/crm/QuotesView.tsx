@@ -40,7 +40,14 @@ export const QuotesView: React.FC<QuotesViewProps> = ({ leads, onSelectLead, sho
   const totalQuote = shingleCost + gutterCost + underlaymentCost;
 
   const handleSendQuote = async () => {
-    if (!selectedLead) return;
+    if (!selectedLead) {
+      showToast('Please select a lead before creating a quote.', 'warning');
+      return;
+    }
+    if (!Number.isFinite(squares) || squares <= 0 || waste < 0 || waste > 30) {
+      showToast('Enter valid roof squares and a waste percentage from 0 to 30.', 'warning');
+      return;
+    }
     setSending(true);
     try {
       const payload = {
@@ -57,9 +64,9 @@ export const QuotesView: React.FC<QuotesViewProps> = ({ leads, onSelectLead, sho
         total_amount: totalQuote
       };
       const res = await api.createQuote(payload);
-      const createdQuote = res && res.quote ? res.quote : { ...payload, id: `qt-${Date.now()}`, amount: totalQuote, status: 'Sent', date: 'Just now' };
+      if (!res?.quote) throw new Error('Quote was not confirmed by the server');
+      const createdQuote = res.quote;
       setRecentQuotes(prev => [createdQuote, ...prev]);
-      await api.updateLeadStatus(selectedLead.id, 'QUOTE_SENT');
       showToast(`💰 Real Quote of $${totalQuote.toLocaleString()} saved & sent via SMS to ${selectedLead.full_name}!`, 'success');
       if (onQuoteSent) onQuoteSent();
     } catch (err) {

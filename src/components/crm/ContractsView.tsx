@@ -42,6 +42,11 @@ export const ContractsView: React.FC<ContractsViewProps> = ({ leads, showToast }
       showToast('⚠️ Please select a lead for the contract!', 'warning');
       return;
     }
+    const amount = Number(contractAmount.replace(/[$,\s]/g, ''));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      showToast('Enter a valid contract amount greater than zero.', 'warning');
+      return;
+    }
     try {
       const payload = {
         lead_id: selectedLead.id,
@@ -52,7 +57,8 @@ export const ContractsView: React.FC<ContractsViewProps> = ({ leads, showToast }
         amount: contractAmount
       };
       const res = await api.createContract(payload);
-      const createdCnt = res && res.contract ? res.contract : { ...payload, id: `cnt-${Date.now()}`, sent_date: 'Just now', status: 'Sent (Waiting for Signature)', signed_date: null };
+      if (!res?.contract) throw new Error('Contract was not confirmed by the server');
+      const createdCnt = res.contract;
       setContracts(prev => [createdCnt, ...prev]);
       showToast(`📑 Real contract created & SMS E-Sign link sent to ${selectedLead.full_name}!`, 'success');
       setShowContractForm(false);

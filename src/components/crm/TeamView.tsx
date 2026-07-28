@@ -18,16 +18,20 @@ export const TeamView: React.FC<TeamViewProps> = ({ showToast }) => {
   }, []);
 
   const [showAddForm, setShowAddForm] = useState(false);
-  const [teamName, setTeamName] = useState('Alex Hernandez');
-  const [teamRole, setTeamRole] = useState('Field Hail Inspector & Estimator');
-  const [teamPhone, setTeamPhone] = useState('469-555-0144');
-  const [teamEmail, setTeamEmail] = useState('alex@apexroofing.com');
+  const [teamName, setTeamName] = useState('');
+  const [teamRole, setTeamRole] = useState('');
+  const [teamPhone, setTeamPhone] = useState('');
+  const [teamEmail, setTeamEmail] = useState('');
   const [teamStatus, setTeamStatus] = useState('🟢 Active in Field');
   const [teamCerts, setTeamCerts] = useState('HAAG Certified Hail Inspector, OSHA 30 Safety');
 
   const handleAddTeamMember = async () => {
-    if (!teamName.trim()) {
+    if (!teamName.trim() || !teamRole.trim() || !teamPhone.trim() || !teamEmail.trim()) {
       showToast('⚠️ Please enter a name for the team member!', 'warning');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(teamEmail.trim())) {
+      showToast('Enter a valid email address.', 'warning');
       return;
     }
     try {
@@ -38,18 +42,12 @@ export const TeamView: React.FC<TeamViewProps> = ({ showToast }) => {
         phone: teamPhone,
         email: teamEmail,
         status: teamStatus,
-        active_jobs: 1,
-        quoted_volume: '$12,500',
-        conversion_rate: '60%',
+        active_jobs: 0,
         certifications: certList.length > 0 ? certList : ['HAAG Certified Inspector']
       };
       const res = await api.addTeamMember(payload);
-      if (res && res.teamMember) {
-        setTeamMembers(prev => [res.teamMember, ...prev]);
-      } else {
-        const resAll = await api.getCRMData();
-        if (resAll && resAll.teamMembers) setTeamMembers(resAll.teamMembers);
-      }
+      if (!res?.teamMember) throw new Error('Team member was not confirmed by the server');
+      setTeamMembers(prev => [res.teamMember, ...prev]);
       showToast(`👷 Real estimator ${teamName} added to database & invited via SMS!`, 'success');
       setShowAddForm(false);
     } catch (err) {
