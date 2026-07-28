@@ -1,177 +1,223 @@
-import React from 'react';
-import { DollarSign, TrendingUp, Award, Users, PhoneMissed, Zap, Shield, BarChart3 } from 'lucide-react';
-import { Stats } from '../../services/api';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  AlertCircle, BadgeDollarSign, Banknote, CheckCircle2, CircleDollarSign,
+  FileCheck2, FileText, RefreshCw, TrendingUp, WalletCards
+} from 'lucide-react';
+import { Stats, api } from '../../services/api';
 
 interface RoiViewProps {
   stats: Stats | null;
 }
 
-export const RoiView: React.FC<RoiViewProps> = ({ stats }) => {
-  // Derive live values from stats, no fake fallbacks
-  const totalLeads = stats?.totalLeads ?? 0;
-  const missedCalls = stats?.missedCalls ?? 0;
-  const totalQuoted = stats?.revenue?.totalQuoted ?? 0;
-  const totalWon = stats?.revenue?.totalWon ?? 0;
-  const conversionRate = stats?.revenue?.conversionRate ?? 0;
-  const avgTicket = totalWon > 0 && totalLeads > 0 ? Math.round(totalWon / Math.max(Math.round(totalLeads * conversionRate / 100), 1)) : 0;
+type FinancialData = {
+  contracts: any[];
+  invoices: any[];
+  payments: any[];
+};
 
-  // AI auto-qualification value — estimated as 24% of quoted pipeline
-  const aiAutoValue = Math.round(totalQuoted * 0.24);
-  // Missed call recovery revenue — estimated from conversion of recovered calls
-  const missedCallRevenue = Math.round(missedCalls * avgTicket * 0.5);
-  // Marketing ROI ratio
-  const marketingSpend = Math.round(totalWon / 5.4);
-  const marketingROI = totalWon > 0 ? (totalWon / marketingSpend).toFixed(1) : '0.0';
+const parseMoney = (value: unknown): number => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  const parsed = Number(String(value ?? '').replace(/[^0-9.-]+/g, ''));
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
-  // Pipeline growth
-  const prevMonthPipeline = Math.round(totalQuoted * 0.78);
-  const growthPct = prevMonthPipeline > 0 ? (((totalQuoted - prevMonthPipeline) / prevMonthPipeline) * 100).toFixed(1) : '0.0';
+const money = (value: number) => new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0,
+}).format(value);
 
-  // Channel breakdown — proportional to pipeline sources if available
-  const webLeads = stats?.sources?.LANDING_PAGE ?? 0;
-  const webBooked = Math.round(webLeads * 0.44);
-  const webRevenue = Math.round(totalWon * 0.56);
+export const RoiView: React.FC<RoiViewProps> = () => {
+  const [data, setData] = useState<FinancialData>({ contracts: [], invoices: [], payments: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const callLeads = stats?.sources?.MISSED_CALL ?? missedCalls;
-  const callBooked = Math.round(callLeads * 0.5);
-  const callRevenue = Math.round(totalWon * 0.21);
+  const loadFinancials = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const response = await api.getCRMData();
+      setData({
+        contracts: Array.isArray(response?.contracts) ? response.contracts : [],
+        invoices: Array.isArray(response?.invoices) ? response.invoices : [],
+        payments: Array.isArray(response?.payments) ? response.payments : [],
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Financial records could not be loaded.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const smsLeads = stats?.sources?.INCOMING_SMS ?? 0;
-  const smsBooked = Math.round(smsLeads * 0.32);
-  const smsRevenue = Math.round(totalWon * 0.23);
+  useEffect(() => { void loadFinancials(); }, []);
 
-  const jobsCompleted = Math.round(totalLeads * conversionRate / 100);
+  const metrics = useMemo(() => {
+    const signedContracts = data.contracts.filter(contract => String(contract.status || '').toLowerCase().includes('signed'));
+    const contractedRevenue = signedContracts.reduce((sum, contract) => sum + parseMoney(contract.amount), 0);
+    const invoicedRevenue = data.invoices.reduce((sum, invoice) => sum + parseMoney(invoice.amount), 0);
+    const collectedRevenue = data.payments
+      .filter(payment => !['failed', 'void', 'refunded'].includes(String(payment.status || '').toLowerCase()))
+      .reduce((sum, payment) => sum + parseMoney(payment.amount), 0);
+    const outstandingInvoices = Math.max(invoicedRevenue - collectedRevenue, 0);
+    const uninvoicedContracts = Math.max(contractedRevenue - invoicedRevenue, 0);
+    const collectionRate = invoicedRevenue > 0 ? (collectedRevenue / invoicedRevenue) * 100 : 0;
+    const cashRealization = contractedRevenue > 0 ? (collectedRevenue / contractedRevenue) * 100 : 0;
+    const averageContract = signedContracts.length > 0 ? contractedRevenue / signedContracts.length : 0;
+
+    return {
+      signedContracts,
+      contractedRevenue,
+      invoicedRevenue,
+      collectedRevenue,
+      outstandingInvoices,
+      uninvoicedContracts,
+      collectionRate,
+      cashRealization,
+      averageContract,
+    };
+  }, [data]);
+
+  const ledger = useMemo(() => [
+    ...data.contracts.map(item => ({
+      id: item.id,
+      type: 'Contract',
+      client: item.client_name || 'Customer',
+      amount: parseMoney(item.amount),
+      status: item.status || 'Unknown',
+      date: item.signed_date || item.sent_date || item.created_at,
+    })),
+    ...data.invoices.map(item => ({
+      id: item.id,
+      type: 'Invoice',
+      client: item.client_name || 'Customer',
+      amount: parseMoney(item.amount),
+      status: item.status || 'Unknown',
+      date: item.date_issued || item.created_at,
+    })),
+    ...data.payments.map(item => ({
+      id: item.id,
+      type: 'Payment',
+      client: item.client_name || 'Customer',
+      amount: parseMoney(item.amount),
+      status: item.status || 'Recorded',
+      date: item.date_received || item.created_at,
+    })),
+  ].sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime()).slice(0, 12), [data]);
 
   return (
     <>
       <div className="page-header">
         <div>
-          <h1>📊 Executive ROI & Revenue Performance Dashboard</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--primary-400)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '.11em', textTransform: 'uppercase', marginBottom: 7 }}>
+            <BadgeDollarSign size={15} /> Verified financial records
+          </div>
+          <h1>Revenue & Cash Performance</h1>
           <p style={{ color: 'var(--text-tertiary)', fontSize: '0.88rem', marginTop: 4 }}>
-            Real-time financial return, AI virtual receptionist value metrics, and marketing ad spend profitability
+            Calculated directly from signed contracts, issued invoices and recorded offline payments.
           </p>
         </div>
-        <div style={{ fontSize: '0.82rem', padding: '6px 14px', border: '1px solid var(--border-color)', borderRadius: 12, fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--bg-secondary)' }}>
-          ✨ Live Accounting Sync Active
+        <button className="btn btn-outline btn-sm" onClick={() => void loadFinancials()} disabled={loading}>
+          <RefreshCw size={14} className={loading ? 'spin' : ''} /> {loading ? 'Refreshing…' : 'Refresh data'}
+        </button>
+      </div>
+
+      {error && (
+        <div className="crm-box" style={{ display: 'flex', alignItems: 'center', gap: 11, borderColor: 'rgba(239,68,68,.35)', color: '#fca5a5', marginBottom: 20 }}>
+          <AlertCircle size={18} /> <span style={{ flex: 1 }}>{error}</span>
+          <button className="btn btn-outline btn-sm" onClick={() => void loadFinancials()}>Try again</button>
+        </div>
+      )}
+
+      <div className="crm-grid-3x" style={{ marginBottom: 20 }}>
+        {[
+          { label: 'Signed contract value', value: metrics.contractedRevenue, detail: `${metrics.signedContracts.length} signed contracts`, Icon: FileCheck2, color: '#60a5fa' },
+          { label: 'Total invoiced', value: metrics.invoicedRevenue, detail: `${data.invoices.length} invoices issued`, Icon: FileText, color: '#a78bfa' },
+          { label: 'Payments collected', value: metrics.collectedRevenue, detail: `${data.payments.length} offline payments recorded`, Icon: Banknote, color: '#34d399' },
+        ].map(({ label, value, detail, Icon, color }) => (
+          <div className="crm-box" key={label} style={{ padding: 22 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+              <div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em' }}>{label}</div>
+                <div style={{ fontSize: '2rem', fontWeight: 900, marginTop: 7 }}>{loading ? '—' : money(value)}</div>
+                <div style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem', marginTop: 6 }}>{detail}</div>
+              </div>
+              <div style={{ width: 46, height: 46, borderRadius: 13, display: 'grid', placeItems: 'center', color, background: `${color}18` }}><Icon size={22} /></div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="crm-grid-2x" style={{ marginBottom: 20 }}>
+        <div className="crm-box">
+          <h3 style={{ fontSize: '1rem', marginBottom: 17 }}>Revenue conversion</h3>
+          {[
+            { label: 'Contracted → invoiced', amount: metrics.invoicedRevenue, total: metrics.contractedRevenue, remainder: metrics.uninvoicedContracts, remainderLabel: 'Not yet invoiced' },
+            { label: 'Invoiced → collected', amount: metrics.collectedRevenue, total: metrics.invoicedRevenue, remainder: metrics.outstandingInvoices, remainderLabel: 'Outstanding' },
+          ].map(row => {
+            const percent = row.total > 0 ? Math.min((row.amount / row.total) * 100, 100) : 0;
+            return (
+              <div key={row.label} style={{ marginBottom: 19 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', marginBottom: 8 }}>
+                  <span style={{ fontWeight: 750 }}>{row.label}</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>{percent.toFixed(1)}%</span>
+                </div>
+                <div style={{ height: 9, borderRadius: 20, background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${percent}%`, borderRadius: 20, background: 'linear-gradient(90deg, #3b82f6, #22c55e)' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-tertiary)', fontSize: '0.71rem', marginTop: 7 }}>
+                  <span>{money(row.amount)} processed</span><span>{money(row.remainder)} {row.remainderLabel.toLowerCase()}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="crm-box">
+          <h3 style={{ fontSize: '1rem', marginBottom: 15 }}>Real performance indicators</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            {[
+              { label: 'Invoice collection rate', value: `${metrics.collectionRate.toFixed(1)}%`, Icon: WalletCards },
+              { label: 'Contract cash realization', value: `${metrics.cashRealization.toFixed(1)}%`, Icon: TrendingUp },
+              { label: 'Average signed contract', value: money(metrics.averageContract), Icon: CircleDollarSign },
+              { label: 'Outstanding invoices', value: money(metrics.outstandingInvoices), Icon: AlertCircle },
+            ].map(({ label, value, Icon }) => (
+              <div key={label} style={{ padding: 14, borderRadius: 12, background: 'var(--bg-tertiary)' }}>
+                <Icon size={17} color="var(--primary-400)" />
+                <div style={{ fontSize: '1.12rem', fontWeight: 850, marginTop: 9 }}>{loading ? '—' : value}</div>
+                <div style={{ color: 'var(--text-tertiary)', fontSize: '0.69rem', marginTop: 3 }}>{label}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 9, marginTop: 13, padding: 11, borderRadius: 10, background: 'rgba(245,158,11,.07)', border: '1px solid rgba(245,158,11,.2)', fontSize: '0.71rem', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+            <AlertCircle size={15} color="#f59e0b" style={{ flex: '0 0 auto' }} />
+            True ROI requires recorded job costs and marketing spend. Until those exist, this page reports verified revenue and cash conversion only.
+          </div>
         </div>
       </div>
 
-      {/* Primary Financial Metric Cards */}
-      <div className="crm-grid-2x" style={{ marginBottom: 24 }}>
-        <div className="crm-box" style={{ padding: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>TOTAL ACTIVE PIPELINE VALUE</div>
-              <div style={{ fontSize: '2.4rem', fontWeight: 900, color: 'var(--text-primary)', marginTop: 4 }}>${totalQuoted.toLocaleString()}</div>
-            </div>
-            <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <DollarSign size={28} color="var(--text-primary)" />
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 14, fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
-            <TrendingUp size={16} /> +{growthPct}% growth compared to last month (${prevMonthPipeline.toLocaleString()})
-          </div>
-        </div>
-
-        <div className="crm-box" style={{ padding: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase' }}>CLOSED / WON REVENUE (YTD)</div>
-              <div style={{ fontSize: '2.4rem', fontWeight: 900, color: 'var(--text-primary)', marginTop: 4 }}>${totalWon.toLocaleString()}</div>
-            </div>
-            <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Award size={28} color="var(--text-primary)" />
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 14, fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
-            <span>Average Closed Roof Job Ticket: <strong style={{ color: 'var(--text-primary)' }}>${avgTicket.toLocaleString()}</strong> across {jobsCompleted} roofs</span>
-          </div>
-        </div>
-      </div>
-
-      {/* AI & Missed Call Recovery Value Grid */}
-      <div className="crm-grid-3x" style={{ marginBottom: 24 }}>
-        <div className="crm-box" style={{ background: 'var(--bg-tertiary)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <Zap size={20} color="var(--text-primary)" />
-            <span style={{ fontWeight: 700, fontSize: '0.94rem' }}>AI Auto-Qualification Value</span>
-          </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>${aiAutoValue.toLocaleString()}</div>
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', marginTop: 6, lineHeight: 1.4 }}>
-            Revenue from {Math.round(totalLeads * 0.34)} jobs booked autonomously by Sarah AI without human intervention.
-          </p>
-        </div>
-
-        <div className="crm-box" style={{ background: 'var(--bg-tertiary)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <PhoneMissed size={20} color="var(--text-primary)" />
-            <span style={{ fontWeight: 700, fontSize: '0.94rem' }}>Missed Call Revenue Saved</span>
-          </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>${missedCallRevenue.toLocaleString()}</div>
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', marginTop: 6, lineHeight: 1.4 }}>
-            Revenue recovered from {missedCalls} incoming calls that went unanswered but were saved via instant SMS text-back.
-          </p>
-        </div>
-
-        <div className="crm-box" style={{ background: 'var(--bg-tertiary)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <BarChart3 size={20} color="var(--text-primary)" />
-            <span style={{ fontWeight: 700, fontSize: '0.94rem' }}>Marketing Ad Spend ROI</span>
-          </div>
-          <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>{marketingROI}x ROI</div>
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', marginTop: 6, lineHeight: 1.4 }}>
-            Every $1.00 spent on Google Local Service Ads (LSA) & Facebook Ads generated ${marketingROI} in closed roofing contracts.
-          </p>
-        </div>
-      </div>
-
-      {/* Detailed Channel Breakdown Table */}
       <div className="crm-box">
-        <h3 style={{ marginBottom: 16 }}>Lead Acquisition Channel & Conversion Breakdown</h3>
-
-        <table className="table-premium">
-          <thead>
-            <tr>
-              <th>Lead Source Channel</th>
-              <th>Leads Generated</th>
-              <th>Booked Inspections</th>
-              <th>Conversion Rate</th>
-              <th style={{ textAlign: 'right' }}>Revenue Generated</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                <div style={{ fontWeight: 700 }}>🌐 Landing Page & Interactive Quote Tool</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Apex Roofing & Restoration Website</div>
-              </td>
-              <td>{webLeads} leads</td>
-              <td>{webBooked} booked</td>
-              <td><span style={{ fontWeight: 600 }}>{webLeads > 0 ? ((webBooked / webLeads) * 100).toFixed(1) : '0.0'}%</span></td>
-              <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--text-primary)' }}>${webRevenue.toLocaleString()}</td>
-            </tr>
-            <tr>
-              <td>
-                <div style={{ fontWeight: 700 }}>📞 Missed Call Auto-Recovery Text-Back</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Twilio Voice Intercept</div>
-              </td>
-              <td>{callLeads} calls recovered</td>
-              <td>{callBooked} booked</td>
-              <td><span style={{ fontWeight: 600 }}>{callLeads > 0 ? ((callBooked / callLeads) * 100).toFixed(1) : '0.0'}%</span></td>
-              <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--text-primary)' }}>${callRevenue.toLocaleString()}</td>
-            </tr>
-            <tr>
-              <td>
-                <div style={{ fontWeight: 700 }}>⛈️ Hail Storm Radius SMS Blasts</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Targeted Zip Code Campaigns</div>
-              </td>
-              <td>{smsLeads} leads</td>
-              <td>{smsBooked} booked</td>
-              <td><span style={{ fontWeight: 600 }}>{smsLeads > 0 ? ((smsBooked / smsLeads) * 100).toFixed(1) : '0.0'}%</span></td>
-              <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--text-primary)' }}>${smsRevenue.toLocaleString()}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+          <div><h3 style={{ fontSize: '1rem' }}>Financial activity</h3><div style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem', marginTop: 3 }}>Latest contract, invoice and payment records</div></div>
+          <span className="badge badge-scheduled"><CheckCircle2 size={12} /> CRM source</span>
+        </div>
+        {ledger.length === 0 && !loading ? (
+          <div style={{ padding: '38px 20px', textAlign: 'center', color: 'var(--text-tertiary)' }}>No financial records yet. Signed contracts, invoices and payments will appear here.</div>
+        ) : (
+          <table className="table-premium">
+            <thead><tr><th>Record</th><th>Customer</th><th>Status</th><th>Date</th><th style={{ textAlign: 'right' }}>Amount</th></tr></thead>
+            <tbody>
+              {ledger.map((entry, index) => (
+                <tr key={`${entry.type}-${entry.id}-${index}`}>
+                  <td><span style={{ fontWeight: 750 }}>{entry.type}</span><div style={{ color: 'var(--text-tertiary)', fontSize: '0.68rem', marginTop: 2 }}>{entry.id}</div></td>
+                  <td>{entry.client}</td>
+                  <td><span className={String(entry.status).toLowerCase().includes('signed') || entry.type === 'Payment' ? 'badge badge-scheduled' : 'badge badge-missed-call'}>{entry.status}</span></td>
+                  <td>{entry.date ? String(entry.date) : '—'}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 850 }}>{money(entry.amount)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </>
   );
