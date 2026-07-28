@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   BarChart3, CalendarDays, CheckCircle2, ChevronRight, CircleAlert, Clock3,
   Facebook, Globe2, Image, Instagram, Link2, MapPin, MessageSquareText,
-  Plus, Search, Send, Settings2, Sparkles, Star, Store, Youtube
+  Plus, Search, Send, Settings2, Sparkles, Star, Store, Trash2, X, Youtube
 } from 'lucide-react';
 import { Lead } from '../../services/api';
 
@@ -17,28 +17,67 @@ type Channel = {
   color: string;
   icon: React.ReactNode;
   connected: boolean;
+  added: boolean;
+  profileUrl?: string;
   detail: string;
 };
 
-const channels: Channel[] = [
-  { name: 'Google Business Profile', handle: 'Apex Roofing & Restoration', color: '#4285f4', icon: <Store size={21} />, connected: false, detail: 'Manage reviews, photos, services and local updates' },
-  { name: 'Facebook', handle: 'Connect your business Page', color: '#1877f2', icon: <Facebook size={21} />, connected: false, detail: 'Publish posts and respond to comments' },
-  { name: 'Instagram', handle: 'Connect a professional account', color: '#e1306c', icon: <Instagram size={21} />, connected: false, detail: 'Share projects, Reels and storm updates' },
-  { name: 'YouTube', handle: 'Connect your company channel', color: '#ff0033', icon: <Youtube size={22} />, connected: false, detail: 'Publish inspections and project videos' },
+const initialChannels: Channel[] = [
+  { name: 'Google Business Profile', handle: 'Add your Google business location', color: '#4285f4', icon: <Store size={21} />, connected: false, added: false, detail: 'Manage reviews, photos, services and local updates' },
+  { name: 'Facebook', handle: 'Add your business Page', color: '#1877f2', icon: <Facebook size={21} />, connected: false, added: false, detail: 'Publish posts and respond to comments' },
+  { name: 'Instagram', handle: 'Add your professional account', color: '#e1306c', icon: <Instagram size={21} />, connected: false, added: false, detail: 'Share projects, Reels and storm updates' },
+  { name: 'YouTube', handle: 'Add your company channel', color: '#ff0033', icon: <Youtube size={22} />, connected: false, added: false, detail: 'Publish inspections and project videos' },
 ];
 
 export const MarketingView: React.FC<MarketingViewProps> = ({ showToast }) => {
   const [postText, setPostText] = useState('');
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   const [activeSection, setActiveSection] = useState<'overview' | 'planner' | 'reviews'>('overview');
+  const [channels, setChannels] = useState<Channel[]>(initialChannels);
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [accountProvider, setAccountProvider] = useState(initialChannels[0].name);
+  const [accountName, setAccountName] = useState('');
+  const [accountUrl, setAccountUrl] = useState('');
 
-  const connectedCount = useMemo(() => channels.filter(channel => channel.connected).length, []);
+  const connectedCount = useMemo(() => channels.filter(channel => channel.connected).length, [channels]);
   const toggleChannel = (name: string) => {
     setSelectedChannels(current => current.includes(name) ? current.filter(item => item !== name) : [...current, name]);
   };
 
   const requestConnection = (name: string) => {
-    showToast(`${name} connection is required. An administrator must authorize the business account.`, 'info');
+    const provider = channels.find(channel => channel.name === name) || channels[0];
+    setAccountProvider(provider.name);
+    setAccountName(provider.added ? provider.handle : '');
+    setAccountUrl(provider.profileUrl || '');
+    setAccountModalOpen(true);
+  };
+
+  const saveAccount = () => {
+    if (!accountName.trim()) {
+      showToast('Enter the business page or account name.', 'warning');
+      return;
+    }
+    setChannels(current => current.map(channel => channel.name === accountProvider ? {
+      ...channel,
+      handle: accountName.trim(),
+      profileUrl: accountUrl.trim(),
+      added: true,
+      connected: false,
+    } : channel));
+    setAccountModalOpen(false);
+    showToast(`${accountProvider} account added. Authorize it to enable publishing and live insights.`, 'success');
+  };
+
+  const removeAccount = () => {
+    const original = initialChannels.find(channel => channel.name === accountProvider);
+    if (original) setChannels(current => current.map(channel => channel.name === accountProvider ? original : channel));
+    setSelectedChannels(current => current.filter(name => name !== accountProvider));
+    setAccountModalOpen(false);
+    showToast(`${accountProvider} was removed from this dashboard.`, 'info');
+  };
+
+  const authorizeAccount = () => {
+    showToast(`${accountProvider} OAuth credentials must be configured before authorization can open.`, 'warning');
   };
 
   const handlePublish = () => {
@@ -65,8 +104,8 @@ export const MarketingView: React.FC<MarketingViewProps> = ({ showToast }) => {
             Manage your roofing company’s social pages, Google presence, reviews and publishing calendar.
           </p>
         </div>
-        <button className="btn btn-primary btn-sm" onClick={() => requestConnection('Business account')}>
-          <Link2 size={15} /> Connect an account
+        <button className="btn btn-primary btn-sm" onClick={() => requestConnection(channels[0].name)}>
+          <Plus size={15} /> Add an account
         </button>
       </div>
 
@@ -112,14 +151,14 @@ export const MarketingView: React.FC<MarketingViewProps> = ({ showToast }) => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, fontSize: '0.88rem' }}>
                           {channel.name}
                           <span style={{ fontSize: '0.65rem', color: channel.connected ? '#22c55e' : '#f59e0b', background: channel.connected ? 'rgba(34,197,94,.1)' : 'rgba(245,158,11,.1)', padding: '3px 7px', borderRadius: 20 }}>
-                            {channel.connected ? 'CONNECTED' : 'CONNECTION NEEDED'}
+                            {channel.connected ? 'CONNECTED' : channel.added ? 'ADDED · AUTHORIZE' : 'NOT ADDED'}
                           </span>
                         </div>
                         <div style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: 3 }}>{channel.handle}</div>
                         <div style={{ color: 'var(--text-tertiary)', fontSize: '0.71rem', marginTop: 3 }}>{channel.detail}</div>
                       </div>
                       <button className="btn btn-outline btn-sm" onClick={() => requestConnection(channel.name)}>
-                        Connect <ChevronRight size={14} />
+                        {channel.added ? 'Manage' : 'Add account'} <ChevronRight size={14} />
                       </button>
                     </div>
                   ))}
@@ -244,6 +283,66 @@ export const MarketingView: React.FC<MarketingViewProps> = ({ showToast }) => {
           </div>
         </div>
       </div>
+
+      {accountModalOpen && (
+        <div
+          role="presentation"
+          onMouseDown={event => { if (event.currentTarget === event.target) setAccountModalOpen(false); }}
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(3,8,18,.72)', backdropFilter: 'blur(8px)', display: 'grid', placeItems: 'center', padding: 20 }}
+        >
+          <div className="crm-box" role="dialog" aria-modal="true" aria-label="Add social account" style={{ width: 'min(540px, 100%)', padding: 0, overflow: 'hidden', boxShadow: '0 26px 80px rgba(0,0,0,.42)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px', borderBottom: '1px solid var(--border-color)' }}>
+              <div>
+                <h3 style={{ fontSize: '1rem' }}>{channels.find(channel => channel.name === accountProvider)?.added ? 'Manage account' : 'Add business account'}</h3>
+                <p style={{ color: 'var(--text-tertiary)', fontSize: '0.72rem', marginTop: 3 }}>Add the roofer’s official business profile, then authorize access.</p>
+              </div>
+              <button className="btn btn-ghost btn-sm" aria-label="Close" onClick={() => setAccountModalOpen(false)}><X size={17} /></button>
+            </div>
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 15 }}>
+              <div>
+                <label className="input-label">Platform</label>
+                <select
+                  className="input-field"
+                  value={accountProvider}
+                  onChange={event => {
+                    const provider = channels.find(channel => channel.name === event.target.value)!;
+                    setAccountProvider(provider.name);
+                    setAccountName(provider.added ? provider.handle : '');
+                    setAccountUrl(provider.profileUrl || '');
+                  }}
+                >
+                  {channels.map(channel => <option key={channel.name} value={channel.name}>{channel.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="input-label">Business page / account name</label>
+                <input className="input-field" value={accountName} onChange={event => setAccountName(event.target.value)} placeholder="Example: Apex Roofing & Restoration" />
+              </div>
+              <div>
+                <label className="input-label">Public profile URL <span style={{ color: 'var(--text-tertiary)', fontWeight: 500 }}>(optional)</span></label>
+                <input className="input-field" type="url" value={accountUrl} onChange={event => setAccountUrl(event.target.value)} placeholder="https://..." />
+              </div>
+              <div style={{ display: 'flex', gap: 10, padding: 12, borderRadius: 11, background: 'rgba(245,158,11,.08)', border: '1px solid rgba(245,158,11,.22)', color: 'var(--text-secondary)', fontSize: '0.75rem', lineHeight: 1.5 }}>
+                <CircleAlert size={17} color="#f59e0b" style={{ flex: '0 0 auto', marginTop: 1 }} />
+                Adding a page stores its profile details. Secure authorization is a separate step and requires the platform’s business login and OAuth credentials.
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '15px 20px', borderTop: '1px solid var(--border-color)', background: 'var(--bg-tertiary)' }}>
+              <div>
+                {channels.find(channel => channel.name === accountProvider)?.added && (
+                  <button className="btn btn-ghost btn-sm" style={{ color: '#ef4444' }} onClick={removeAccount}><Trash2 size={14} /> Remove</button>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 9 }}>
+                <button className="btn btn-outline btn-sm" onClick={saveAccount}>{channels.find(channel => channel.name === accountProvider)?.added ? 'Save changes' : 'Add account'}</button>
+                {channels.find(channel => channel.name === accountProvider)?.added && (
+                  <button className="btn btn-primary btn-sm" onClick={authorizeAccount}><Link2 size={14} /> Authorize</button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
