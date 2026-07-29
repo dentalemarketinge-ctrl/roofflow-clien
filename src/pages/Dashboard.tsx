@@ -728,12 +728,38 @@ export default function Dashboard() {
 }
 
 /* ---- Settings Component ---- */
+const DEFAULT_ROUTING_SETTINGS = {
+  company_name: 'Apex Roofing & Restoration',
+  company_phone: '+17575403912',
+  service_area: 'Dallas-Fort Worth, TX',
+  google_review_link: '',
+  ai_greeting_template: 'Hi! This is Sarah with {{company}}. How can we help with your roof today?',
+  missed_call_template: 'Sorry we missed your call. Reply here and tell us how we can help, or reply CALL for a callback.',
+  telnyx_phone_number: '+17575403912',
+  telnyx_messaging_profile_id: '40019fab-57c4-4618-9759-c04049bfb5f0',
+  telnyx_texml_app_id: '3014974925187319165',
+  telnyx_ai_assistant_id: 'assistant-f3a58277-5cc7-4e4b-be9e-a8e2003b43b9',
+  telnyx_public_key: '',
+  roofer_phone_number: '+213555544133',
+  business_days: [0, 1, 2, 3, 4, 5, 6],
+  business_start: '08:00',
+  business_end: '18:00',
+  business_timezone: 'Africa/Algiers',
+  ring_timeout_seconds: 18,
+};
+
 function SettingsView({ showToast }: { showToast: (msg: string, type: string) => void }) {
-  const [settings, setSettings] = useState<any>(null);
+  const [settings, setSettings] = useState<any>(DEFAULT_ROUTING_SETTINGS);
+  const [previewMode, setPreviewMode] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    api.getSettings().then((res) => setSettings(res.settings)).catch(console.error);
+    api.getSettings()
+      .then((res) => {
+        setSettings({ ...DEFAULT_ROUTING_SETTINGS, ...res.settings });
+        setPreviewMode(false);
+      })
+      .catch(() => setPreviewMode(true));
   }, []);
 
   const handleSave = async () => {
@@ -748,19 +774,25 @@ function SettingsView({ showToast }: { showToast: (msg: string, type: string) =>
     }
   };
 
-  if (!settings) return <div className="spinner" style={{ margin: '40px auto' }} />;
-
   return (
     <>
       <div className="page-header">
         <h1>Settings</h1>
-        <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving}>
+        <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving || previewMode} title={previewMode ? 'Available after backend deployment' : undefined}>
           {saving ? <span className="spinner" /> : <CheckCircle size={14} />}
           {saving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 640 }}>
+        {previewMode && (
+          <div className="glass-card" style={{ padding: 16, borderColor: 'var(--gold)' }}>
+            <strong>Preview configuration</strong>
+            <p style={{ marginTop: 5, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+              The form is ready to review. Saving and live status activate when the private backend is deployed.
+            </p>
+          </div>
+        )}
         <div className="glass-card" style={{ padding: 24 }}>
           <h3 style={{ marginBottom: 16, fontSize: '1.1rem' }}>Company details</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
