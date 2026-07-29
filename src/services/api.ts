@@ -78,6 +78,17 @@ export interface ContractorSettings {
   google_review_link: string | null;
   ai_greeting_template: string;
   missed_call_template: string;
+  telnyx_phone_number: string | null;
+  telnyx_messaging_profile_id: string | null;
+  telnyx_texml_app_id: string | null;
+  telnyx_ai_assistant_id: string | null;
+  telnyx_public_key: string | null;
+  roofer_phone_number: string | null;
+  business_days: number[];
+  business_start: string;
+  business_end: string;
+  business_timezone: string;
+  ring_timeout_seconds: number;
 }
 
 export const api = {

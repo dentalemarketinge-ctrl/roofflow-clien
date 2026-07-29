@@ -813,23 +813,81 @@ function SettingsView({ showToast }: { showToast: (msg: string, type: string) =>
         </div>
 
         <div className="glass-card" style={{ padding: 24 }}>
-          <h3 style={{ marginBottom: 16, fontSize: '1.1rem' }}>Twilio SMS integration</h3>
+          <h3 style={{ marginBottom: 6, fontSize: '1.1rem' }}>Telnyx call routing</h3>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginBottom: 16 }}>
-            Enter your Twilio credentials to enable real AI SMS and missed call text-backs.
+            Customer-specific values used for human-first calling, AI fallback, and SMS.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <label className="input-label">Account SID</label>
-              <input className="input-field" type="password" value={settings.twilio_account_sid || ''} onChange={(e) => setSettings({ ...settings, twilio_account_sid: e.target.value })} />
+              <label className="input-label">Telnyx Business Number</label>
+              <input className="input-field" placeholder="+17575403912" value={settings.telnyx_phone_number || ''} onChange={(e) => setSettings({ ...settings, telnyx_phone_number: e.target.value })} />
             </div>
             <div>
-              <label className="input-label">Auth Token</label>
-              <input className="input-field" type="password" value={settings.twilio_auth_token || ''} onChange={(e) => setSettings({ ...settings, twilio_auth_token: e.target.value })} />
+              <label className="input-label">Roofer Forwarding Number</label>
+              <input className="input-field" placeholder="+213555544133" value={settings.roofer_phone_number || ''} onChange={(e) => setSettings({ ...settings, roofer_phone_number: e.target.value })} />
             </div>
             <div>
-              <label className="input-label">Twilio Phone Number</label>
-              <input className="input-field" placeholder="+1234567890" value={settings.twilio_phone || ''} onChange={(e) => setSettings({ ...settings, twilio_phone: e.target.value })} />
+              <label className="input-label">AI Assistant ID</label>
+              <input className="input-field" placeholder="assistant-..." value={settings.telnyx_ai_assistant_id || ''} onChange={(e) => setSettings({ ...settings, telnyx_ai_assistant_id: e.target.value })} />
             </div>
+            <div>
+              <label className="input-label">TeXML Application ID</label>
+              <input className="input-field" placeholder="3014974925187319165" value={settings.telnyx_texml_app_id || ''} onChange={(e) => setSettings({ ...settings, telnyx_texml_app_id: e.target.value })} />
+            </div>
+            <div>
+              <label className="input-label">Messaging Profile ID</label>
+              <input className="input-field" placeholder="40019fab-..." value={settings.telnyx_messaging_profile_id || ''} onChange={(e) => setSettings({ ...settings, telnyx_messaging_profile_id: e.target.value })} />
+            </div>
+            <div>
+              <label className="input-label">Webhook Public Key</label>
+              <input className="input-field" type="password" autoComplete="off" value={settings.telnyx_public_key || ''} onChange={(e) => setSettings({ ...settings, telnyx_public_key: e.target.value })} />
+            </div>
+          </div>
+        </div>
+
+        <div className="glass-card" style={{ padding: 24 }}>
+          <h3 style={{ marginBottom: 16, fontSize: '1.1rem' }}>Human-first schedule</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div>
+              <label className="input-label">Days the roofer rings first</label>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
+                  <label key={day} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.85rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={(settings.business_days || []).includes(index)}
+                      onChange={(e) => {
+                        const days = new Set<number>(settings.business_days || []);
+                        e.target.checked ? days.add(index) : days.delete(index);
+                        setSettings({ ...settings, business_days: Array.from(days).sort() });
+                      }}
+                    />
+                    {day}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+              <div>
+                <label className="input-label">Start Time</label>
+                <input className="input-field" type="time" value={settings.business_start || '08:00'} onChange={(e) => setSettings({ ...settings, business_start: e.target.value })} />
+              </div>
+              <div>
+                <label className="input-label">End Time</label>
+                <input className="input-field" type="time" value={settings.business_end || '18:00'} onChange={(e) => setSettings({ ...settings, business_end: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <label className="input-label">Timezone</label>
+              <input className="input-field" placeholder="Africa/Algiers" value={settings.business_timezone || ''} onChange={(e) => setSettings({ ...settings, business_timezone: e.target.value })} />
+            </div>
+            <div>
+              <label className="input-label">Ring Before AI Answers (seconds)</label>
+              <input className="input-field" type="number" min={5} max={120} value={settings.ring_timeout_seconds || 18} onChange={(e) => setSettings({ ...settings, ring_timeout_seconds: Number(e.target.value) })} />
+            </div>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              The private Telnyx API key remains in protected deployment settings and is never sent to this dashboard.
+            </p>
           </div>
         </div>
       </div>
