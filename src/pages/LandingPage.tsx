@@ -200,7 +200,7 @@ export default function LandingPage() {
         </nav>
 
         <div className="premium-nav-actions">
-          <a className="portal-link" href="/dashboard">Contractor portal</a>
+          <a className="portal-link" href="#/dashboard">Contractor portal</a>
           <a className="nav-call" href="tel:2145550199"><Phone size={16} /> Call now</a>
         </div>
       </header>
@@ -618,7 +618,7 @@ export default function LandingPage() {
             <strong>Company</strong>
             <a href="#process">Our process</a>
             <a href="#reviews">Reviews</a>
-            <a href="/dashboard">Contractor portal</a>
+            <a href="#/dashboard">Contractor portal</a>
           </div>
           <div>
             <strong>Available 24/7</strong>
