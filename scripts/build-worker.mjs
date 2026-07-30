@@ -11,15 +11,19 @@ const workerSource = `const worker = {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith('/api/')) {
-      return new Response(
-        JSON.stringify({
-          error: 'The hosted preview does not include the private CRM API.',
-        }),
-        {
-          status: 503,
-          headers: { 'content-type': 'application/json; charset=utf-8' },
-        },
-      );
+      if (!env.API_ORIGIN) {
+        return new Response(
+          JSON.stringify({
+            error: 'The SaaS API is ready but has not been connected to this deployment yet.',
+          }),
+          {
+            status: 503,
+            headers: { 'content-type': 'application/json; charset=utf-8' },
+          },
+        );
+      }
+      const upstreamUrl = new URL(url.pathname + url.search, env.API_ORIGIN);
+      return fetch(new Request(upstreamUrl, request));
     }
 
     const assetResponse = await env.ASSETS.fetch(request);

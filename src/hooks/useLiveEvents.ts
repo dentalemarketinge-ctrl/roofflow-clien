@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { getValidAccessToken } from '../services/session';
 
 interface SSEEvent {
   event: string;
@@ -12,63 +13,71 @@ type EventHandler = (data: any) => void;
  * Connects to the backend SSE stream and dispatches events to handlers
  */
 export function useLiveEvents() {
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const handlersRef = useRef<Map<string, EventHandler[]>>(new Map());
   const [connected, setConnected] = useState(false);
   const [lastEvent, setLastEvent] = useState<SSEEvent | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
 
-  const connect = useCallback(() => {
-    // Close existing connection
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-    }
+  const connect = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-    const es = new EventSource('/api/live-events');
-    eventSourceRef.current = es;
-
-    es.addEventListener('connected', (e: MessageEvent) => {
-      console.log('📡 SSE Connected:', JSON.parse(e.data));
-      setConnected(true);
-    });
-
-    es.addEventListener('heartbeat', () => {
-      // Keep-alive, no action needed
-    });
-
-    // Listen for all custom events
-    const eventTypes = [
-      'lead_created',
-      'lead_updated',
-      'lead_deleted',
-      'new_message',
-      'missed_call',
-      'ai_toggled',
-    ];
-
-    eventTypes.forEach((eventType) => {
-      es.addEventListener(eventType, (e: MessageEvent) => {
-        const data = JSON.parse(e.data);
-        setLastEvent({ event: eventType, data });
-
-        // Call all registered handlers for this event type
-        const handlers = handlersRef.current.get(eventType);
-        if (handlers) {
-          handlers.forEach((handler) => handler(data));
-        }
+    try {
+      const token = await getValidAccessToken();
+      if (!token || controller.signal.aborted) return;
+      const response = await fetch('/api/live-events', {
+        headers: {
+          Accept: 'text/event-stream',
+          Authorization: `Bearer ${token}`,
+        },
+        signal: controller.signal,
       });
-    });
+      if (!response.ok || !response.body) throw new Error(`Live stream returned ${response.status}`);
 
-    es.onerror = () => {
-      console.warn('📡 SSE connection error, reconnecting...');
-      setConnected(false);
-      es.close();
+      setConnected(true);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let currentEvent = 'message';
 
-      // Reconnect after 3 seconds
-      reconnectTimeoutRef.current = window.setTimeout(() => {
-        connect();
-      }, 3000);
-    };
+      while (!controller.signal.aborted) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n');
+        const blocks = buffer.split('\n\n');
+        buffer = blocks.pop() || '';
+
+        for (const block of blocks) {
+          let dataText = '';
+          currentEvent = 'message';
+          for (const line of block.split('\n')) {
+            if (line.startsWith('event:')) currentEvent = line.slice(6).trim();
+            if (line.startsWith('data:')) dataText += line.slice(5).trim();
+          }
+          if (!dataText || currentEvent === 'heartbeat') continue;
+          try {
+            const data = JSON.parse(dataText);
+            if (currentEvent === 'connected') {
+              setConnected(true);
+              continue;
+            }
+            setLastEvent({ event: currentEvent, data });
+            handlersRef.current.get(currentEvent)?.forEach((handler) => handler(data));
+          } catch {
+            // Ignore malformed keep-alive payloads without dropping the stream.
+          }
+        }
+      }
+    } catch (error) {
+      if (!controller.signal.aborted) console.warn('Live sync disconnected', error);
+    } finally {
+      if (!controller.signal.aborted) {
+        setConnected(false);
+        reconnectTimeoutRef.current = window.setTimeout(() => { void connect(); }, 3000);
+      }
+    }
   }, []);
 
   // Register an event handler
@@ -88,12 +97,10 @@ export function useLiveEvents() {
 
   // Connect on mount, disconnect on unmount
   useEffect(() => {
-    connect();
+    void connect();
 
     return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-      }
+      abortRef.current?.abort();
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }

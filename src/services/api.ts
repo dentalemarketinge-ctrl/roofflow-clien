@@ -2,13 +2,16 @@
  * RoofFlow AI — API Service Layer
  * Communicates with the Express backend
  */
+import { getValidAccessToken } from './session';
 
 const API_BASE = '/api';
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const accessToken = await getValidAccessToken();
   const res = await fetch(`${API_BASE}${endpoint}`, {
     headers: {
       'Content-Type': 'application/json',
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...options?.headers,
     },
     ...options,
@@ -91,11 +94,51 @@ export interface ContractorSettings {
   ring_timeout_seconds: number;
 }
 
+export interface WorkspaceProfile {
+  user: { id: string; email: string; full_name: string | null };
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+    plan: string;
+    subscription_status: string;
+    trial_ends_at: string | null;
+  } | null;
+  role: 'owner' | 'admin' | 'member' | null;
+  onboarding_required: boolean;
+}
+
+export interface PublicWorkspace {
+  slug: string;
+  company_name: string;
+  company_phone: string;
+  service_area: string;
+}
+
 export const api = {
+  getPublicWorkspace: (slug: string) =>
+    request<{ workspace: PublicWorkspace }>(`/public/workspaces/${encodeURIComponent(slug)}`),
+
+  // Authentication & workspace
+  signUp: (data: { email: string; password: string; full_name: string }) =>
+    request<any>('/auth/signup', { method: 'POST', body: JSON.stringify(data) }),
+  login: (data: { email: string; password: string }) =>
+    request<any>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+  requestPasswordReset: (email: string) =>
+    request<{ success: boolean }>('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+  updatePassword: (password: string) =>
+    request<{ success: boolean }>('/auth/password', { method: 'POST', body: JSON.stringify({ password }) }),
+  getProfile: () => request<WorkspaceProfile>('/auth/me'),
+  createWorkspace: (data: { company_name: string; slug: string; company_phone: string; service_area: string; business_timezone: string }) =>
+    request<any>('/auth/onboarding', { method: 'POST', body: JSON.stringify(data) }),
+  getWorkspaceMembers: () => request<{ members: any[] }>('/auth/members'),
+  inviteWorkspaceMember: (email: string, role: 'admin' | 'member') =>
+    request<any>('/auth/invitations', { method: 'POST', body: JSON.stringify({ email, role }) }),
+
   // Leads
   getLeads: () => request<{ leads: Lead[] }>('/leads'),
   getLead: (id: string) => request<{ lead: Lead }>(`/leads/${id}`),
-  createLead: (data: Partial<Lead>) =>
+  createLead: (data: Partial<Lead> & { organization_slug?: string }) =>
     request<{ lead: Lead }>('/leads', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -141,7 +184,7 @@ export const api = {
 
   // Webhooks / Simulation
   simulateMissedCall: (caller_phone?: string, caller_name?: string) =>
-    request<any>('/webhooks/simulate/missed-call', {
+    request<any>('/leads/simulate-missed-call', {
       method: 'POST',
       body: JSON.stringify({ caller_phone, caller_name }),
     }),

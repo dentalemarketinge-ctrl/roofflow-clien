@@ -5,10 +5,11 @@ import {
   Clock, TrendingUp, Users, PhoneIncoming, AlertTriangle,
   CheckCircle, ChevronRight, Plus, RefreshCw,
   Calendar, Navigation, DollarSign, FileText, CreditCard, Camera, HardHat, BarChart3, Megaphone,
-  House, ArrowUpRight, ExternalLink
+  House, ArrowUpRight, ExternalLink, LogOut, UserPlus, Crown
 } from 'lucide-react';
 import { api, Lead, Message, Stats } from '../services/api';
 import { useLiveEvents } from '../hooks/useLiveEvents';
+import { useAuth } from '../contexts/AuthContext';
 import { CalendarView } from '../components/crm/CalendarView';
 import { QuotesView } from '../components/crm/QuotesView';
 import { ContractsView } from '../components/crm/ContractsView';
@@ -31,6 +32,7 @@ const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; color: 
 const PIPELINE_ORDER = ['NEW', 'AI_QUALIFYING', 'INSPECTION_SCHEDULED', 'QUOTE_SENT', 'JOB_WON'];
 
 export default function Dashboard() {
+  const { profile, logout } = useAuth();
   const [activeView, setActiveView] = useState<
     'pipeline' | 'chat' | 'missed-calls' | 'calendar' | 'route' |
     'quotes' | 'contracts' | 'invoices' | 'payments' | 'photos' | 'team' |
@@ -48,6 +50,14 @@ export default function Dashboard() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const { connected, on } = useLiveEvents();
   let toastCounter = useRef(0);
+  const companyName = profile?.organization?.name || 'RoofFlow';
+  const accountName = profile?.user.full_name || profile?.user.email.split('@')[0] || 'Account';
+  const accountInitials = accountName
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   const showToast = useCallback((message: string, type: string = 'info') => {
     const id = ++toastCounter.current;
@@ -214,7 +224,7 @@ export default function Dashboard() {
         <div className="sidebar-brand">
           <div className="brand-icon"><House size={18} /></div>
           <span className="brand-name">
-            <strong>APEX</strong>
+            <strong>{companyName}</strong>
             <small>Command center</small>
           </span>
         </div>
@@ -293,14 +303,17 @@ export default function Dashboard() {
           </button>
         </nav>
         <div className="sidebar-footer">
-          <div className="sidebar-avatar">AR</div>
+          <div className="sidebar-avatar">{accountInitials}</div>
           <div className="sidebar-profile">
-            <strong>Alex Rivera</strong>
+            <strong>{accountName}</strong>
             <span>
               <i className={connected ? 'is-online' : ''} />
-              {connected ? 'Systems live' : 'Reconnecting…'}
+              {profile?.role || 'member'} · {connected ? 'Systems live' : 'Reconnecting…'}
             </span>
           </div>
+          <button className="sidebar-signout" type="button" onClick={logout} title="Sign out">
+            <LogOut size={16} />
+          </button>
         </div>
       </div>
 
@@ -308,10 +321,13 @@ export default function Dashboard() {
       <div className="main-content">
         <div className="dashboard-topbar">
           <div>
-            <span className="dashboard-topbar-kicker">Apex Roofing & Restoration</span>
+            <span className="dashboard-topbar-kicker">{companyName}</span>
             <strong>Operations command center</strong>
           </div>
           <div className="dashboard-topbar-actions">
+            <span className="workspace-plan">
+              {profile?.organization?.plan || 'trial'}
+            </span>
             <span className={`live-status ${connected ? 'is-online' : ''}`}>
               <i /> {connected ? 'Live sync' : 'Reconnecting'}
             </span>
@@ -729,29 +745,35 @@ export default function Dashboard() {
 
 /* ---- Settings Component ---- */
 const DEFAULT_ROUTING_SETTINGS = {
-  company_name: 'Apex Roofing & Restoration',
-  company_phone: '+17575403912',
-  service_area: 'Dallas-Fort Worth, TX',
+  company_name: '',
+  company_phone: '',
+  service_area: '',
   google_review_link: '',
   ai_greeting_template: 'Hi! This is Sarah with {{company}}. How can we help with your roof today?',
   missed_call_template: 'Sorry we missed your call. Reply here and tell us how we can help, or reply CALL for a callback.',
-  telnyx_phone_number: '+17575403912',
-  telnyx_messaging_profile_id: '40019fab-57c4-4618-9759-c04049bfb5f0',
-  telnyx_texml_app_id: '3014974925187319165',
-  telnyx_ai_assistant_id: 'assistant-f3a58277-5cc7-4e4b-be9e-a8e2003b43b9',
+  telnyx_phone_number: '',
+  telnyx_messaging_profile_id: '',
+  telnyx_texml_app_id: '',
+  telnyx_ai_assistant_id: '',
   telnyx_public_key: '',
-  roofer_phone_number: '+213555544133',
-  business_days: [0, 1, 2, 3, 4, 5, 6],
+  roofer_phone_number: '',
+  business_days: [1, 2, 3, 4, 5],
   business_start: '08:00',
   business_end: '18:00',
-  business_timezone: 'Africa/Algiers',
+  business_timezone: 'America/Chicago',
   ring_timeout_seconds: 18,
 };
 
 function SettingsView({ showToast }: { showToast: (msg: string, type: string) => void }) {
+  const { profile } = useAuth();
   const [settings, setSettings] = useState<any>(DEFAULT_ROUTING_SETTINGS);
   const [previewMode, setPreviewMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [members, setMembers] = useState<any[]>([]);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<'admin' | 'member'>('member');
+  const [inviting, setInviting] = useState(false);
+  const canManageWorkspace = profile?.role === 'owner' || profile?.role === 'admin';
 
   useEffect(() => {
     api.getSettings()
@@ -760,7 +782,25 @@ function SettingsView({ showToast }: { showToast: (msg: string, type: string) =>
         setPreviewMode(false);
       })
       .catch(() => setPreviewMode(true));
+    api.getWorkspaceMembers()
+      .then((res) => setMembers(res.members))
+      .catch(() => setMembers([]));
   }, []);
+
+  const handleInvite = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!inviteEmail.trim()) return;
+    setInviting(true);
+    try {
+      await api.inviteWorkspaceMember(inviteEmail.trim(), inviteRole);
+      showToast(`Invitation sent to ${inviteEmail.trim()}`, 'success');
+      setInviteEmail('');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not send invitation', 'error');
+    } finally {
+      setInviting(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -784,7 +824,7 @@ function SettingsView({ showToast }: { showToast: (msg: string, type: string) =>
         </button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 640 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 760 }}>
         {previewMode && (
           <div className="glass-card" style={{ padding: 16, borderColor: 'var(--gold)' }}>
             <strong>Preview configuration</strong>
@@ -813,6 +853,49 @@ function SettingsView({ showToast }: { showToast: (msg: string, type: string) =>
               <input className="input-field" placeholder="https://g.page/r/..." value={settings.google_review_link || ''} onChange={(e) => setSettings({ ...settings, google_review_link: e.target.value })} />
             </div>
           </div>
+        </div>
+
+        <div className="glass-card workspace-access-card">
+          <div className="workspace-access-heading">
+            <div>
+              <h3>Workspace access</h3>
+              <p>Invite office staff or managers without sharing your password.</p>
+            </div>
+            <span className="role-chip"><Crown size={13} /> {profile?.role || 'member'}</span>
+          </div>
+          <div className="workspace-member-list">
+            {members.map((member) => (
+              <div className="workspace-member" key={member.id}>
+                <span className="workspace-member-avatar">
+                  {(member.display_name || member.email || 'U').slice(0, 2).toUpperCase()}
+                </span>
+                <span>
+                  <strong>{member.display_name || member.email || 'Workspace user'}</strong>
+                  {member.display_name && member.email && <small>{member.email}</small>}
+                </span>
+                <em>{member.role}</em>
+              </div>
+            ))}
+            {!members.length && <p className="workspace-empty">Your membership appears here after the SaaS database migration is applied.</p>}
+          </div>
+          {canManageWorkspace && (
+            <form className="workspace-invite-form" onSubmit={handleInvite}>
+              <label>
+                Invite by email
+                <input type="email" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} placeholder="office@company.com" required />
+              </label>
+              <label>
+                Role
+                <select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as 'admin' | 'member')}>
+                  <option value="member">Member</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </label>
+              <button className="btn btn-primary btn-sm" type="submit" disabled={inviting || previewMode}>
+                <UserPlus size={14} /> {inviting ? 'Sending...' : 'Send invite'}
+              </button>
+            </form>
+          )}
         </div>
 
         <div className="glass-card" style={{ padding: 24 }}>

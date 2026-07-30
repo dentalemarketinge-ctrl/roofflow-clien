@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   ArrowRight,
   BadgeCheck,
@@ -140,6 +140,14 @@ function TrustItem({ icon, title, text }: { icon: ReactNode; title: string; text
 }
 
 export default function LandingPage() {
+  const pageQuery = new URLSearchParams(window.location.search);
+  const hashQuery = new URLSearchParams(window.location.hash.split('?')[1] || '');
+  const organizationSlug = hashQuery.get('org') || pageQuery.get('org') || 'apex-roofing';
+  const [workspace, setWorkspace] = useState({
+    company_name: 'Apex Roofing & Restoration',
+    company_phone: '(214) 555-0199',
+    service_area: 'Dallas-Fort Worth',
+  });
   const [formStep, setFormStep] = useState(1);
   const [formData, setFormData] = useState({
     full_name: '',
@@ -152,6 +160,18 @@ export default function LandingPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const companyWords = workspace.company_name.trim().split(/\s+/);
+  const brandName = (companyWords.shift() || 'RoofFlow').toUpperCase();
+  const brandDescriptor = companyWords.join(' ') || 'Roofing & Restoration';
+  const phoneHref = workspace.company_phone.replace(/[^\d+]/g, '');
+
+  useEffect(() => {
+    api.getPublicWorkspace(organizationSlug)
+      .then(({ workspace: publicWorkspace }) => setWorkspace(publicWorkspace))
+      .catch(() => {
+        // Keep the branded fallback while the public API is being deployed.
+      });
+  }, [organizationSlug]);
 
   const selectOption = (field: 'issue_type' | 'roof_age', value: string) => {
     setFormData((current) => ({ ...current, [field]: value }));
@@ -167,7 +187,7 @@ export default function LandingPage() {
     setError('');
     setIsSubmitting(true);
     try {
-      await api.createLead(formData);
+      await api.createLead({ ...formData, organization_slug: organizationSlug });
       setFormStep(6);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'We could not send your request. Please call our team directly.');
@@ -180,15 +200,15 @@ export default function LandingPage() {
     <div className="roof-site">
       <div className="service-ribbon">
         <span><span className="service-pulse" /> Emergency crews are on call 24/7</span>
-        <a href="tel:2145550199"><Phone size={14} /> (214) 555-0199</a>
+        <a href={`tel:${phoneHref}`}><Phone size={14} /> {workspace.company_phone}</a>
       </div>
 
       <header className="premium-nav">
-        <a className="premium-brand" href="#top" aria-label="Apex Roofing home">
+        <a className="premium-brand" href="#top" aria-label={`${workspace.company_name} home`}>
           <RoofMark />
           <span>
-            <strong>APEX</strong>
-            <small>Roofing & Restoration</small>
+            <strong>{brandName}</strong>
+            <small>{brandDescriptor}</small>
           </span>
         </a>
 
@@ -593,7 +613,7 @@ export default function LandingPage() {
               <a className="premium-button premium-button-gold" href="#dispatch">
                 Request an inspection <ArrowRight size={18} />
               </a>
-              <a href="tel:2145550199"><Headphones size={18} /> (214) 555-0199</a>
+              <a href={`tel:${phoneHref}`}><Headphones size={18} /> {workspace.company_phone}</a>
             </div>
           </div>
         </section>
@@ -604,7 +624,7 @@ export default function LandingPage() {
           <div>
             <a className="premium-brand premium-brand-footer" href="#top">
               <RoofMark compact />
-              <span><strong>APEX</strong><small>Roofing & Restoration</small></span>
+              <span><strong>{brandName}</strong><small>{brandDescriptor}</small></span>
             </a>
             <p>Premium roofing and storm restoration built around clarity, care, and lasting protection.</p>
           </div>
@@ -622,12 +642,12 @@ export default function LandingPage() {
           </div>
           <div>
             <strong>Available 24/7</strong>
-            <a href="tel:2145550199">(214) 555-0199</a>
-            <span>Serving Dallas–Fort Worth</span>
+            <a href={`tel:${phoneHref}`}>{workspace.company_phone}</a>
+            <span>Serving {workspace.service_area}</span>
           </div>
         </div>
         <div className="site-shell premium-footer-bottom">
-          <span>© 2026 Apex Roofing & Restoration</span>
+          <span>© 2026 {workspace.company_name}</span>
           <span>Licensed · Bonded · Insured</span>
         </div>
       </footer>
