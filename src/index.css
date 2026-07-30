@@ -5179,7 +5179,8 @@ h4 { font-size: 1.25rem; font-weight: 600; }
 }
 
 .platform-admin-header button,
-.platform-admin-title > button {
+.platform-admin-title > button,
+.platform-preview-exit {
   min-height: 36px;
   padding: 0 12px;
   border: 1px solid #d3d3cc;
@@ -5192,6 +5193,7 @@ h4 { font-size: 1.25rem; font-weight: 600; }
   font-size: 0.7rem;
   font-weight: 800;
   cursor: pointer;
+  text-decoration: none;
 }
 
 .platform-admin-content {
@@ -5229,6 +5231,22 @@ h4 { font-size: 1.25rem; font-weight: 600; }
   display: block;
   color: #747c77;
   font-size: 0.82rem;
+}
+
+.platform-preview-label {
+  width: fit-content;
+  margin-top: 12px;
+  padding: 6px 10px;
+  border: 1px solid #c7d8ce;
+  border-radius: 999px;
+  display: block;
+  background: #eaf4ed;
+  color: #3d6d55;
+  font-size: 0.61rem;
+  font-style: normal;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .platform-admin-stats {

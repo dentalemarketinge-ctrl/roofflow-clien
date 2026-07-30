@@ -53,6 +53,7 @@ function App() {
           <Route path="/subscription" element={<SubscriptionPage />} />
           <Route path="/admin" element={<ProtectedAdmin><AdminPage /></ProtectedAdmin>} />
           <Route path="/preview" element={<Dashboard />} />
+          <Route path="/admin-preview" element={<AdminPage />} />
           <Route
             path="/dashboard"
             element={<ProtectedWorkspace><Dashboard /></ProtectedWorkspace>}

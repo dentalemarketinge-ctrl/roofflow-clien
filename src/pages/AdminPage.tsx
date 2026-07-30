@@ -15,8 +15,68 @@ import { useAuth } from '../contexts/AuthContext';
 
 type WorkspaceStatus = AdminWorkspace['subscription_status'];
 
+const PREVIEW_WORKSPACES: AdminWorkspace[] = [
+  {
+    id: 'preview-apex',
+    name: 'Apex Roofing & Restoration',
+    slug: 'apex-roofing',
+    plan: 'manual',
+    subscription_status: 'active',
+    trial_ends_at: null,
+    created_at: '2026-07-18T10:00:00.000Z',
+    owner_email: 'alex@apexroofing.com',
+    owner_name: 'Alex Rivera',
+    member_count: 6,
+    company_phone: '+1 (214) 555-0199',
+    telnyx_phone_number: '+1 (757) 540-3912',
+  },
+  {
+    id: 'preview-summit',
+    name: 'Summit Exteriors',
+    slug: 'summit-exteriors',
+    plan: 'trial',
+    subscription_status: 'trialing',
+    trial_ends_at: new Date(Date.now() + 8 * 86400000).toISOString(),
+    created_at: '2026-07-25T14:30:00.000Z',
+    owner_email: 'jordan@summitexteriors.com',
+    owner_name: 'Jordan Blake',
+    member_count: 3,
+    company_phone: '+1 (469) 555-0124',
+    telnyx_phone_number: '+1 (469) 555-0178',
+  },
+  {
+    id: 'preview-lone-star',
+    name: 'Lone Star Roof Pros',
+    slug: 'lone-star-roof-pros',
+    plan: 'manual',
+    subscription_status: 'paused',
+    trial_ends_at: null,
+    created_at: '2026-07-11T09:15:00.000Z',
+    owner_email: 'maria@lonestarroofpros.com',
+    owner_name: 'Maria Santos',
+    member_count: 4,
+    company_phone: '+1 (972) 555-0186',
+    telnyx_phone_number: '+1 (972) 555-0141',
+  },
+  {
+    id: 'preview-peak',
+    name: 'Peak Shield Roofing',
+    slug: 'peak-shield',
+    plan: 'trial',
+    subscription_status: 'trialing',
+    trial_ends_at: new Date(Date.now() + 2 * 86400000).toISOString(),
+    created_at: '2026-07-29T16:45:00.000Z',
+    owner_email: 'sam@peakshield.com',
+    owner_name: 'Sam Carter',
+    member_count: 1,
+    company_phone: '+1 (817) 555-0157',
+    telnyx_phone_number: null,
+  },
+];
+
 export default function AdminPage() {
   const { profile, logout } = useAuth();
+  const isPreview = window.location.hash.startsWith('#/admin-preview');
   const [workspaces, setWorkspaces] = useState<AdminWorkspace[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -26,6 +86,11 @@ export default function AdminPage() {
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
+    if (isPreview) {
+      setWorkspaces(PREVIEW_WORKSPACES);
+      setLoading(false);
+      return;
+    }
     try {
       const result = await api.getAdminWorkspaces();
       setWorkspaces(result.workspaces);
@@ -34,7 +99,7 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isPreview]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -57,6 +122,18 @@ export default function AdminPage() {
   const updateStatus = async (workspace: AdminWorkspace, status: WorkspaceStatus, trialDays?: number) => {
     setUpdatingId(workspace.id);
     setError('');
+    if (isPreview) {
+      const trialEnd = status === 'trialing'
+        ? new Date(Date.now() + (trialDays || 14) * 86400000).toISOString()
+        : workspace.trial_ends_at;
+      setWorkspaces(current => current.map(item =>
+        item.id === workspace.id
+          ? { ...item, subscription_status: status, plan: status === 'trialing' ? 'trial' : 'manual', trial_ends_at: trialEnd }
+          : item,
+      ));
+      setUpdatingId('');
+      return;
+    }
     try {
       const result = await api.updateWorkspaceSubscription(workspace.id, status, trialDays);
       setWorkspaces(current => current.map(item =>
@@ -78,8 +155,10 @@ export default function AdminPage() {
           <small>Platform admin</small>
         </a>
         <div>
-          <span>{profile?.user.email}</span>
-          <button type="button" onClick={logout}><LogOut size={16} /> Sign out</button>
+          <span>{isPreview ? 'owner@roofflow.app' : profile?.user.email}</span>
+          {isPreview
+            ? <a className="platform-preview-exit" href="#/preview"><LogOut size={16} /> Roofer dashboard</a>
+            : <button type="button" onClick={logout}><LogOut size={16} /> Sign out</button>}
         </div>
       </header>
 
@@ -89,6 +168,7 @@ export default function AdminPage() {
             <p>Manual account control</p>
             <h1>Roofer workspaces</h1>
             <span>Activate customers after receiving payment, or pause access when needed.</span>
+            {isPreview && <em className="platform-preview-label">Interactive preview · no real accounts are changed</em>}
           </div>
           <button type="button" onClick={() => void load()} disabled={loading}>
             <RefreshCw size={16} className={loading ? 'spin-icon' : ''} /> Refresh
