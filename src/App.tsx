@@ -6,6 +6,7 @@ import AuthPage from './pages/AuthPage';
 import OnboardingPage from './pages/OnboardingPage';
 import SetPasswordPage from './pages/SetPasswordPage';
 import SubscriptionPage from './pages/SubscriptionPage';
+import AdminPage from './pages/AdminPage';
 
 function ProtectedWorkspace({ children }: { children: React.ReactNode }) {
   const { profile, loading } = useAuth();
@@ -32,6 +33,14 @@ function ProtectedWorkspace({ children }: { children: React.ReactNode }) {
   return children;
 }
 
+function ProtectedAdmin({ children }: { children: React.ReactNode }) {
+  const { profile, loading } = useAuth();
+  if (loading) return <div className="app-loading"><span className="spinner" /><p>Opening platform admin...</p></div>;
+  if (!profile) return <Navigate to="/login" replace />;
+  if (!profile.is_platform_admin) return <Navigate to="/dashboard" replace />;
+  return children;
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -42,6 +51,7 @@ function App() {
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/set-password" element={<SetPasswordPage />} />
           <Route path="/subscription" element={<SubscriptionPage />} />
+          <Route path="/admin" element={<ProtectedAdmin><AdminPage /></ProtectedAdmin>} />
           <Route
             path="/dashboard"
             element={<ProtectedWorkspace><Dashboard /></ProtectedWorkspace>}

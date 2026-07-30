@@ -5,9 +5,9 @@ import { clearSession, consumeAuthRedirect, getSession, setSession } from '../se
 type AuthContextValue = {
   profile: WorkspaceProfile | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<WorkspaceProfile | null>;
   signup: (email: string, password: string, fullName: string) => Promise<{ needsConfirmation: boolean }>;
-  refreshProfile: () => Promise<void>;
+  refreshProfile: () => Promise<WorkspaceProfile | null>;
   logout: () => void;
 };
 
@@ -22,13 +22,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!getSession()) {
       setProfile(null);
       setLoading(false);
-      return;
+      return null;
     }
     try {
-      setProfile(await api.getProfile());
+      const nextProfile = await api.getProfile();
+      setProfile(nextProfile);
+      return nextProfile;
     } catch {
       clearSession();
       setProfile(null);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -40,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const result = await api.login({ email, password });
     setSession(result.session);
     setLoading(true);
-    await refreshProfile();
+    return refreshProfile();
   }, [refreshProfile]);
 
   const signup = useCallback(async (email: string, password: string, fullName: string) => {

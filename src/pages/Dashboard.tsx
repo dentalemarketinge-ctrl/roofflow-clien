@@ -325,6 +325,11 @@ export default function Dashboard() {
             <strong>Operations command center</strong>
           </div>
           <div className="dashboard-topbar-actions">
+            {profile?.is_platform_admin && (
+              <a href="#/admin" className="website-link admin-console-link">
+                Platform admin
+              </a>
+            )}
             <span className="workspace-plan">
               {profile?.organization?.plan || 'trial'}
             </span>

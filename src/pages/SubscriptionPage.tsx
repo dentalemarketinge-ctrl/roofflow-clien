@@ -22,7 +22,7 @@ export default function SubscriptionPage() {
           <CalendarClock size={18} />
           <span><small>Trial ended</small><strong>{trialEnd}</strong></span>
         </div>
-        <p className="subscription-note">Billing activation is controlled by the RoofFlow platform owner while payment checkout is connected.</p>
+        <p className="subscription-note">After payment is received, the RoofFlow platform owner manually activates this workspace.</p>
         <button className="auth-switch subscription-signout" type="button" onClick={logout}>
           <LogOut size={15} /> Sign out
         </button>

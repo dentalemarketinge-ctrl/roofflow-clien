@@ -17,6 +17,7 @@ export default function AuthPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
+  if (profile?.is_platform_admin && !profile.organization) return <Navigate to="/admin" replace />;
   if (profile?.organization) return <Navigate to="/dashboard" replace />;
   if (profile?.onboarding_required) return <Navigate to="/onboarding" replace />;
 
@@ -27,8 +28,8 @@ export default function AuthPage() {
     setSubmitting(true);
     try {
       if (mode === 'login') {
-        await login(email, password);
-        navigate('/dashboard');
+        const nextProfile = await login(email, password);
+        navigate(nextProfile?.is_platform_admin && !nextProfile.organization ? '/admin' : '/dashboard');
       } else if (mode === 'signup') {
         const result = await signup(email, password, fullName);
         if (result.needsConfirmation) {

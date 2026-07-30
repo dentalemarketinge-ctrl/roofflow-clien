@@ -106,6 +106,7 @@ export interface WorkspaceProfile {
   } | null;
   role: 'owner' | 'admin' | 'member' | null;
   onboarding_required: boolean;
+  is_platform_admin: boolean;
 }
 
 export interface PublicWorkspace {
@@ -113,6 +114,21 @@ export interface PublicWorkspace {
   company_name: string;
   company_phone: string;
   service_area: string;
+}
+
+export interface AdminWorkspace {
+  id: string;
+  name: string;
+  slug: string;
+  plan: string;
+  subscription_status: 'trialing' | 'active' | 'paused' | 'cancelled';
+  trial_ends_at: string | null;
+  created_at: string;
+  owner_email: string | null;
+  owner_name: string | null;
+  member_count: number;
+  company_phone: string | null;
+  telnyx_phone_number: string | null;
 }
 
 export const api = {
@@ -134,6 +150,16 @@ export const api = {
   getWorkspaceMembers: () => request<{ members: any[] }>('/auth/members'),
   inviteWorkspaceMember: (email: string, role: 'admin' | 'member') =>
     request<any>('/auth/invitations', { method: 'POST', body: JSON.stringify({ email, role }) }),
+  getAdminWorkspaces: () =>
+    request<{ workspaces: AdminWorkspace[] }>('/auth/admin/workspaces'),
+  updateWorkspaceSubscription: (
+    id: string,
+    subscription_status: AdminWorkspace['subscription_status'],
+    trial_days?: number,
+  ) => request<{ workspace: AdminWorkspace }>(`/auth/admin/workspaces/${id}/subscription`, {
+    method: 'PATCH',
+    body: JSON.stringify({ subscription_status, trial_days }),
+  }),
 
   // Leads
   getLeads: () => request<{ leads: Lead[] }>('/leads'),
