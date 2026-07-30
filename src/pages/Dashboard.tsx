@@ -31,8 +31,129 @@ const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; color: 
 
 const PIPELINE_ORDER = ['NEW', 'AI_QUALIFYING', 'INSPECTION_SCHEDULED', 'QUOTE_SENT', 'JOB_WON'];
 
+const PREVIEW_LEADS: Lead[] = [
+  {
+    id: 'preview-1',
+    full_name: 'Sarah Mitchell',
+    phone: '+1 (214) 555-0138',
+    email: 'sarah@example.com',
+    zip_code: '75034',
+    address: 'Frisco, TX',
+    issue_type: 'ACTIVE_LEAK',
+    roof_age: '10-20 years',
+    has_insurance_claim: false,
+    status: 'NEW',
+    source: 'MISSED_CALL',
+    ai_auto_respond: true,
+    inspection_date: null,
+    inspection_notes: null,
+    quote_amount: null,
+    job_value: null,
+    created_at: new Date(Date.now() - 8 * 60000).toISOString(),
+    updated_at: new Date(Date.now() - 8 * 60000).toISOString(),
+  },
+  {
+    id: 'preview-2',
+    full_name: 'Marcus Johnson',
+    phone: '+1 (469) 555-0172',
+    email: 'marcus@example.com',
+    zip_code: '75024',
+    address: 'Plano, TX',
+    issue_type: 'STORM_DAMAGE',
+    roof_age: 'Under 10 years',
+    has_insurance_claim: true,
+    status: 'AI_QUALIFYING',
+    source: 'LANDING_PAGE',
+    ai_auto_respond: true,
+    inspection_date: null,
+    inspection_notes: 'Hail damage reported after Tuesday storm.',
+    quote_amount: null,
+    job_value: null,
+    created_at: new Date(Date.now() - 42 * 60000).toISOString(),
+    updated_at: new Date(Date.now() - 20 * 60000).toISOString(),
+  },
+  {
+    id: 'preview-3',
+    full_name: 'Emily Carter',
+    phone: '+1 (972) 555-0194',
+    email: 'emily@example.com',
+    zip_code: '75093',
+    address: 'West Plano, TX',
+    issue_type: 'ROOF_REPLACEMENT',
+    roof_age: '20+ years',
+    has_insurance_claim: false,
+    status: 'INSPECTION_SCHEDULED',
+    source: 'REFERRAL',
+    ai_auto_respond: false,
+    inspection_date: new Date(Date.now() + 86400000).toISOString(),
+    inspection_notes: 'Inspection booked for tomorrow at 10:00 AM.',
+    quote_amount: null,
+    job_value: null,
+    created_at: new Date(Date.now() - 5 * 3600000).toISOString(),
+    updated_at: new Date(Date.now() - 2 * 3600000).toISOString(),
+  },
+  {
+    id: 'preview-4',
+    full_name: 'David Ramirez',
+    phone: '+1 (214) 555-0166',
+    email: 'david@example.com',
+    zip_code: '75001',
+    address: 'Addison, TX',
+    issue_type: 'STORM_DAMAGE',
+    roof_age: '10-20 years',
+    has_insurance_claim: true,
+    status: 'QUOTE_SENT',
+    source: 'GOOGLE',
+    ai_auto_respond: false,
+    inspection_date: new Date(Date.now() - 86400000).toISOString(),
+    inspection_notes: 'Insurance scope received.',
+    quote_amount: 18450,
+    job_value: null,
+    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 6 * 3600000).toISOString(),
+  },
+  {
+    id: 'preview-5',
+    full_name: 'Jennifer Lee',
+    phone: '+1 (469) 555-0113',
+    email: 'jennifer@example.com',
+    zip_code: '75035',
+    address: 'Frisco, TX',
+    issue_type: 'ROOF_REPLACEMENT',
+    roof_age: '20+ years',
+    has_insurance_claim: true,
+    status: 'JOB_WON',
+    source: 'REFERRAL',
+    ai_auto_respond: false,
+    inspection_date: new Date(Date.now() - 4 * 86400000).toISOString(),
+    inspection_notes: 'Contract signed and material selection complete.',
+    quote_amount: 23780,
+    job_value: 23780,
+    created_at: new Date(Date.now() - 7 * 86400000).toISOString(),
+    updated_at: new Date(Date.now() - 86400000).toISOString(),
+  },
+];
+
+const PREVIEW_STATS: Stats = {
+  totalLeads: 47,
+  todayLeads: 5,
+  weekLeads: 18,
+  pipeline: {
+    NEW: 9,
+    AI_QUALIFYING: 12,
+    INSPECTION_SCHEDULED: 11,
+    QUOTE_SENT: 8,
+    JOB_WON: 7,
+  },
+  sources: { LANDING_PAGE: 18, MISSED_CALL: 13, GOOGLE: 9, REFERRAL: 7 },
+  revenue: { totalQuoted: 184500, totalWon: 96750, conversionRate: 28.6 },
+  missedCalls: 6,
+  totalMessages: 126,
+};
+
 export default function Dashboard() {
   const { profile, logout } = useAuth();
+  const isPreview = window.location.hash.startsWith('#/preview');
   const [activeView, setActiveView] = useState<
     'pipeline' | 'chat' | 'missed-calls' | 'calendar' | 'route' |
     'quotes' | 'contracts' | 'invoices' | 'payments' | 'photos' | 'team' |
@@ -48,10 +169,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState<{ id: number; message: string; type: string }[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const { connected, on } = useLiveEvents();
+  const { connected, on } = useLiveEvents(!isPreview);
   let toastCounter = useRef(0);
-  const companyName = profile?.organization?.name || 'RoofFlow';
-  const accountName = profile?.user.full_name || profile?.user.email.split('@')[0] || 'Account';
+  const companyName = isPreview ? 'Apex Roofing & Restoration' : profile?.organization?.name || 'RoofFlow';
+  const accountName = isPreview ? 'Alex Rivera' : profile?.user.full_name || profile?.user.email.split('@')[0] || 'Account';
   const accountInitials = accountName
     .split(/\s+/)
     .map((part) => part[0])
@@ -77,12 +198,16 @@ export default function Dashboard() {
         setStats(statsRes.stats);
       } catch (err) {
         console.error('Failed to load data:', err);
+        if (isPreview) {
+          setLeads(PREVIEW_LEADS);
+          setStats(PREVIEW_STATS);
+        }
       } finally {
         setLoading(false);
       }
     };
     loadData();
-  }, []);
+  }, [isPreview]);
 
   // SSE Event Handlers
   useEffect(() => {
@@ -307,13 +432,15 @@ export default function Dashboard() {
           <div className="sidebar-profile">
             <strong>{accountName}</strong>
             <span>
-              <i className={connected ? 'is-online' : ''} />
-              {profile?.role || 'member'} · {connected ? 'Systems live' : 'Reconnecting…'}
+              <i className={connected || isPreview ? 'is-online' : ''} />
+              {isPreview ? 'Preview workspace' : `${profile?.role || 'member'} · ${connected ? 'Systems live' : 'Reconnecting…'}`}
             </span>
           </div>
-          <button className="sidebar-signout" type="button" onClick={logout} title="Sign out">
-            <LogOut size={16} />
-          </button>
+          {!isPreview && (
+            <button className="sidebar-signout" type="button" onClick={logout} title="Sign out">
+              <LogOut size={16} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -325,6 +452,7 @@ export default function Dashboard() {
             <strong>Operations command center</strong>
           </div>
           <div className="dashboard-topbar-actions">
+            {isPreview && <span className="preview-dashboard-badge">Read-only preview</span>}
             {profile?.is_platform_admin && (
               <a href="#/admin" className="website-link admin-console-link">
                 Platform admin
@@ -333,8 +461,8 @@ export default function Dashboard() {
             <span className="workspace-plan">
               {profile?.organization?.plan || 'trial'}
             </span>
-            <span className={`live-status ${connected ? 'is-online' : ''}`}>
-              <i /> {connected ? 'Live sync' : 'Reconnecting'}
+            <span className={`live-status ${connected || isPreview ? 'is-online' : ''}`}>
+              <i /> {isPreview ? 'Sample data' : connected ? 'Live sync' : 'Reconnecting'}
             </span>
             <a href="/" className="website-link">
               View website <ExternalLink size={14} />

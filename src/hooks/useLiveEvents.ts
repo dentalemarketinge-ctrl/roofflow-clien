@@ -12,7 +12,7 @@ type EventHandler = (data: any) => void;
  * Custom hook for Server-Sent Events (SSE) live connection
  * Connects to the backend SSE stream and dispatches events to handlers
  */
-export function useLiveEvents() {
+export function useLiveEvents(enabled: boolean = true) {
   const abortRef = useRef<AbortController | null>(null);
   const handlersRef = useRef<Map<string, EventHandler[]>>(new Map());
   const [connected, setConnected] = useState(false);
@@ -20,6 +20,10 @@ export function useLiveEvents() {
   const reconnectTimeoutRef = useRef<number | null>(null);
 
   const connect = useCallback(async () => {
+    if (!enabled) {
+      setConnected(false);
+      return;
+    }
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -78,7 +82,7 @@ export function useLiveEvents() {
         reconnectTimeoutRef.current = window.setTimeout(() => { void connect(); }, 3000);
       }
     }
-  }, []);
+  }, [enabled]);
 
   // Register an event handler
   const on = useCallback((event: string, handler: EventHandler) => {
@@ -97,6 +101,7 @@ export function useLiveEvents() {
 
   // Connect on mount, disconnect on unmount
   useEffect(() => {
+    if (!enabled) return;
     void connect();
 
     return () => {
@@ -105,7 +110,7 @@ export function useLiveEvents() {
         clearTimeout(reconnectTimeoutRef.current);
       }
     };
-  }, [connect]);
+  }, [connect, enabled]);
 
   return { connected, lastEvent, on };
 }
