@@ -3,6 +3,7 @@ import {
   Building2,
   CheckCircle2,
   Clock3,
+  LayoutDashboard,
   LogOut,
   PauseCircle,
   RefreshCw,
@@ -156,6 +157,11 @@ export default function AdminPage() {
         </a>
         <div>
           <span>{isPreview ? 'owner@roofflow.app' : profile?.user.email}</span>
+          {!isPreview && (
+            <a className="platform-preview-exit" href="#/dashboard">
+              <LayoutDashboard size={16} /> Back to dashboard
+            </a>
+          )}
           {isPreview
             ? <a className="platform-preview-exit" href="#/preview"><LogOut size={16} /> Roofer dashboard</a>
             : <button type="button" onClick={logout}><LogOut size={16} /> Sign out</button>}
