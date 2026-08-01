@@ -467,6 +467,11 @@ export default function Dashboard() {
             <a href="/" className="website-link">
               View website <ExternalLink size={14} />
             </a>
+            {!isPreview && (
+              <button className="website-link dashboard-signout" type="button" onClick={logout}>
+                Sign out <LogOut size={14} />
+              </button>
+            )}
           </div>
         </div>
 
