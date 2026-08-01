@@ -22,7 +22,7 @@ import {
   TimerReset,
   type LucideIcon,
 } from 'lucide-react';
-import { api } from '../services/api';
+import { api, type PublicWorkspace } from '../services/api';
 
 type Option = {
   value: string;
@@ -143,11 +143,8 @@ export default function LandingPage() {
   const pageQuery = new URLSearchParams(window.location.search);
   const hashQuery = new URLSearchParams(window.location.hash.split('?')[1] || '');
   const organizationSlug = hashQuery.get('org') || pageQuery.get('org') || 'apex-roofing';
-  const [workspace, setWorkspace] = useState({
-    company_name: 'Apex Roofing & Restoration',
-    company_phone: '(214) 555-0199',
-    service_area: 'Dallas-Fort Worth',
-  });
+  const [workspace, setWorkspace] = useState<PublicWorkspace | null>(null);
+  const [workspaceError, setWorkspaceError] = useState('');
   const [formStep, setFormStep] = useState(1);
   const [formData, setFormData] = useState({
     full_name: '',
@@ -160,18 +157,37 @@ export default function LandingPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  useEffect(() => {
+    let current = true;
+    setWorkspace(null);
+    setWorkspaceError('');
+    api.getPublicWorkspace(organizationSlug)
+      .then(({ workspace: publicWorkspace }) => {
+        if (current) setWorkspace(publicWorkspace);
+      })
+      .catch(() => {
+        if (current) setWorkspaceError('This roofing website is unavailable. Please check the workspace link.');
+      });
+    return () => { current = false; };
+  }, [organizationSlug]);
+
+  useEffect(() => {
+    if (!workspace) return;
+    document.title = `${workspace.company_name} | Roofing & Restoration`;
+  }, [workspace]);
+
+  if (!workspace) {
+    return (
+      <main className="public-workspace-state">
+        {workspaceError ? <><ShieldCheck size={30} /><h1>Website unavailable</h1><p>{workspaceError}</p></> : <><span className="spinner" /><p>Loading roofing company…</p></>}
+      </main>
+    );
+  }
+
   const companyWords = workspace.company_name.trim().split(/\s+/);
   const brandName = (companyWords.shift() || 'RoofFlow').toUpperCase();
   const brandDescriptor = companyWords.join(' ') || 'Roofing & Restoration';
   const phoneHref = workspace.company_phone.replace(/[^\d+]/g, '');
-
-  useEffect(() => {
-    api.getPublicWorkspace(organizationSlug)
-      .then(({ workspace: publicWorkspace }) => setWorkspace(publicWorkspace))
-      .catch(() => {
-        // Keep the branded fallback while the public API is being deployed.
-      });
-  }, [organizationSlug]);
 
   const selectOption = (field: 'issue_type' | 'roof_age', value: string) => {
     setFormData((current) => ({ ...current, [field]: value }));
@@ -221,7 +237,7 @@ export default function LandingPage() {
 
         <div className="premium-nav-actions">
           <a className="portal-link" href="#/dashboard">Contractor portal</a>
-          <a className="nav-call" href="tel:2145550199"><Phone size={16} /> Call now</a>
+          <a className="nav-call" href={`tel:${phoneHref}`}><Phone size={16} /> Call now</a>
         </div>
       </header>
 
@@ -241,7 +257,7 @@ export default function LandingPage() {
                 <a className="premium-button premium-button-gold" href="#dispatch">
                   Schedule a priority inspection <ArrowRight size={18} />
                 </a>
-                <a className="premium-button premium-button-glass" href="tel:2145550199">
+                <a className="premium-button premium-button-glass" href={`tel:${phoneHref}`}>
                   <Phone size={18} /> Speak with our team
                 </a>
               </div>
@@ -438,7 +454,7 @@ export default function LandingPage() {
                   <p>
                     If water is actively entering your home, call our emergency line now for immediate guidance.
                   </p>
-                  <a className="premium-button premium-button-dark" href="tel:2145550199">
+                  <a className="premium-button premium-button-dark" href={`tel:${phoneHref}`}>
                     <Phone size={17} /> Call emergency dispatch
                   </a>
                 </div>

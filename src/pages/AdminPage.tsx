@@ -3,6 +3,7 @@ import {
   Building2,
   CheckCircle2,
   Clock3,
+  ExternalLink,
   LayoutDashboard,
   LogOut,
   PauseCircle,
@@ -221,6 +222,9 @@ export default function AdminPage() {
                     )}
                   </div>
                   <div className="platform-actions">
+                    <a href={`/?org=${encodeURIComponent(workspace.slug)}`} target="_blank" rel="noreferrer">
+                      Website <ExternalLink size={13} />
+                    </a>
                     {workspace.subscription_status !== 'active' && (
                       <button className="activate" disabled={busy} onClick={() => void updateStatus(workspace, 'active')}>
                         Activate

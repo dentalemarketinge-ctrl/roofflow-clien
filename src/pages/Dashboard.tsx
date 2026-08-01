@@ -172,6 +172,9 @@ export default function Dashboard() {
   const { connected, on } = useLiveEvents(!isPreview);
   let toastCounter = useRef(0);
   const companyName = isPreview ? 'Apex Roofing & Restoration' : profile?.organization?.name || 'RoofFlow';
+  const websiteUrl = isPreview
+    ? '/'
+    : `/?org=${encodeURIComponent(profile?.organization?.slug || '')}`;
   const accountName = isPreview ? 'Alex Rivera' : profile?.user.full_name || profile?.user.email.split('@')[0] || 'Account';
   const accountInitials = accountName
     .split(/\s+/)
@@ -464,7 +467,7 @@ export default function Dashboard() {
             <span className={`live-status ${connected || isPreview ? 'is-online' : ''}`}>
               <i /> {isPreview ? 'Sample data' : connected ? 'Live sync' : 'Reconnecting'}
             </span>
-            <a href="/" className="website-link">
+            <a href={websiteUrl} className="website-link" target="_blank" rel="noreferrer">
               View website <ExternalLink size={14} />
             </a>
             {!isPreview && (
@@ -714,7 +717,7 @@ export default function Dashboard() {
                     messages.map((msg) => (
                       <div key={msg.id} className={`chat-bubble ${msg.role}`}>
                         <div className="chat-role">
-                          {msg.role === 'assistant' ? 'Sarah · AI assistant' : msg.role === 'contractor' ? 'Apex team' : 'Homeowner'}
+                          {msg.role === 'assistant' ? 'Sarah · AI assistant' : msg.role === 'contractor' ? `${companyName} team` : 'Homeowner'}
                         </div>
                         {msg.content}
                         <div className="chat-time">{formatTime(msg.created_at)}</div>
