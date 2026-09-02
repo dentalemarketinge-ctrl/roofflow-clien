@@ -3,7 +3,7 @@
   "outputDirectory": "dist/client",
   "framework": null,
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://roofflow-14pg.onrender.com/api/:path*" },
+    { "source": "/api/:path*", "destination": "https://roofflow-14pq.onrender.com/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
