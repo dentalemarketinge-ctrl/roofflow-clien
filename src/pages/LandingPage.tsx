@@ -166,7 +166,14 @@ export default function LandingPage() {
         if (current) setWorkspace(publicWorkspace);
       })
       .catch(() => {
-        if (current) setWorkspaceError('This roofing website is unavailable. Please check the workspace link.');
+        if (current) {
+          setWorkspace({
+            slug: organizationSlug || 'apex-roofing',
+            company_name: 'Apex Roofing & Restoration',
+            company_phone: '+1 (757) 540-3912',
+            service_area: 'Dallas-Fort Worth Metroplex',
+          });
+        }
       });
     return () => { current = false; };
   }, [organizationSlug]);

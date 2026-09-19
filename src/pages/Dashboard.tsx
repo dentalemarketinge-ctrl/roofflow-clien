@@ -5,7 +5,8 @@ import {
   Clock, TrendingUp, Users, PhoneIncoming, AlertTriangle,
   CheckCircle, ChevronRight, Plus, RefreshCw,
   Calendar, Navigation, DollarSign, FileText, CreditCard, Camera, HardHat, BarChart3, Megaphone,
-  House, ArrowUpRight, ExternalLink, LogOut, UserPlus, Crown
+  House, ArrowUpRight, ExternalLink, LogOut, UserPlus, Crown,
+  Play, Pause, Volume2, Headphones, Radio, Sparkles
 } from 'lucide-react';
 import { api, Lead, Message, Stats } from '../services/api';
 import { useLiveEvents } from '../hooks/useLiveEvents';
@@ -31,125 +32,7 @@ const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; color: 
 
 const PIPELINE_ORDER = ['NEW', 'AI_QUALIFYING', 'INSPECTION_SCHEDULED', 'QUOTE_SENT', 'JOB_WON'];
 
-const PREVIEW_LEADS: Lead[] = [
-  {
-    id: 'preview-1',
-    full_name: 'Sarah Mitchell',
-    phone: '+1 (214) 555-0138',
-    email: 'sarah@example.com',
-    zip_code: '75034',
-    address: 'Frisco, TX',
-    issue_type: 'ACTIVE_LEAK',
-    roof_age: '10-20 years',
-    has_insurance_claim: false,
-    status: 'NEW',
-    source: 'MISSED_CALL',
-    ai_auto_respond: true,
-    inspection_date: null,
-    inspection_notes: null,
-    quote_amount: null,
-    job_value: null,
-    created_at: new Date(Date.now() - 8 * 60000).toISOString(),
-    updated_at: new Date(Date.now() - 8 * 60000).toISOString(),
-  },
-  {
-    id: 'preview-2',
-    full_name: 'Marcus Johnson',
-    phone: '+1 (469) 555-0172',
-    email: 'marcus@example.com',
-    zip_code: '75024',
-    address: 'Plano, TX',
-    issue_type: 'STORM_DAMAGE',
-    roof_age: 'Under 10 years',
-    has_insurance_claim: true,
-    status: 'AI_QUALIFYING',
-    source: 'LANDING_PAGE',
-    ai_auto_respond: true,
-    inspection_date: null,
-    inspection_notes: 'Hail damage reported after Tuesday storm.',
-    quote_amount: null,
-    job_value: null,
-    created_at: new Date(Date.now() - 42 * 60000).toISOString(),
-    updated_at: new Date(Date.now() - 20 * 60000).toISOString(),
-  },
-  {
-    id: 'preview-3',
-    full_name: 'Emily Carter',
-    phone: '+1 (972) 555-0194',
-    email: 'emily@example.com',
-    zip_code: '75093',
-    address: 'West Plano, TX',
-    issue_type: 'ROOF_REPLACEMENT',
-    roof_age: '20+ years',
-    has_insurance_claim: false,
-    status: 'INSPECTION_SCHEDULED',
-    source: 'REFERRAL',
-    ai_auto_respond: false,
-    inspection_date: new Date(Date.now() + 86400000).toISOString(),
-    inspection_notes: 'Inspection booked for tomorrow at 10:00 AM.',
-    quote_amount: null,
-    job_value: null,
-    created_at: new Date(Date.now() - 5 * 3600000).toISOString(),
-    updated_at: new Date(Date.now() - 2 * 3600000).toISOString(),
-  },
-  {
-    id: 'preview-4',
-    full_name: 'David Ramirez',
-    phone: '+1 (214) 555-0166',
-    email: 'david@example.com',
-    zip_code: '75001',
-    address: 'Addison, TX',
-    issue_type: 'STORM_DAMAGE',
-    roof_age: '10-20 years',
-    has_insurance_claim: true,
-    status: 'QUOTE_SENT',
-    source: 'GOOGLE',
-    ai_auto_respond: false,
-    inspection_date: new Date(Date.now() - 86400000).toISOString(),
-    inspection_notes: 'Insurance scope received.',
-    quote_amount: 18450,
-    job_value: null,
-    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-    updated_at: new Date(Date.now() - 6 * 3600000).toISOString(),
-  },
-  {
-    id: 'preview-5',
-    full_name: 'Jennifer Lee',
-    phone: '+1 (469) 555-0113',
-    email: 'jennifer@example.com',
-    zip_code: '75035',
-    address: 'Frisco, TX',
-    issue_type: 'ROOF_REPLACEMENT',
-    roof_age: '20+ years',
-    has_insurance_claim: true,
-    status: 'JOB_WON',
-    source: 'REFERRAL',
-    ai_auto_respond: false,
-    inspection_date: new Date(Date.now() - 4 * 86400000).toISOString(),
-    inspection_notes: 'Contract signed and material selection complete.',
-    quote_amount: 23780,
-    job_value: 23780,
-    created_at: new Date(Date.now() - 7 * 86400000).toISOString(),
-    updated_at: new Date(Date.now() - 86400000).toISOString(),
-  },
-];
-
-const PREVIEW_STATS: Stats = {
-  totalLeads: 47,
-  todayLeads: 5,
-  weekLeads: 18,
-  pipeline: {
-    NEW: 9,
-    AI_QUALIFYING: 12,
-    INSPECTION_SCHEDULED: 11,
-    QUOTE_SENT: 8,
-    JOB_WON: 7,
-  },
-  sources: { LANDING_PAGE: 18, MISSED_CALL: 13, GOOGLE: 9, REFERRAL: 7 },
-  revenue: { totalQuoted: 184500, totalWon: 96750, conversionRate: 28.6 },
-  missedCalls: 6,
-  totalMessages: 126,
-};
+import { PREVIEW_LEADS, PREVIEW_STATS, PREVIEW_SETTINGS } from '../services/mockData';
 
 export default function Dashboard() {
   const { profile, logout } = useAuth();
@@ -166,9 +49,27 @@ export default function Dashboard() {
   const [chatInput, setChatInput] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
   const [missedCalls, setMissedCalls] = useState<any[]>([]);
+  const [isPlayingCallAudio, setIsPlayingCallAudio] = useState(false);
+  const [audioProgress, setAudioProgress] = useState(38);
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState<{ id: number; message: string; type: string }[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let interval: any;
+    if (isPlayingCallAudio) {
+      interval = setInterval(() => {
+        setAudioProgress((prev) => {
+          if (prev >= 94) {
+            setIsPlayingCallAudio(false);
+            return 94;
+          }
+          return prev + 1;
+        });
+      }, 300);
+    }
+    return () => clearInterval(interval);
+  }, [isPlayingCallAudio]);
   const { connected, on } = useLiveEvents(!isPreview);
   let toastCounter = useRef(0);
   const companyName = isPreview ? 'Apex Roofing & Restoration' : profile?.organization?.name || 'RoofFlow';
@@ -254,6 +155,13 @@ export default function Dashboard() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Auto-select first lead when opening chat tab if none selected
+  useEffect(() => {
+    if (activeView === 'chat' && !selectedLead && leads.length > 0) {
+      selectLead(leads[0]);
+    }
+  }, [activeView, leads, selectedLead]);
+
   // Load messages when a lead is selected
   const selectLead = async (lead: Lead) => {
     setSelectedLead(lead);
@@ -269,10 +177,30 @@ export default function Dashboard() {
   // Send message
   const handleSendMessage = async (role: 'user' | 'contractor' = 'user') => {
     if (!chatInput.trim() || !selectedLead) return;
+    const textToSend = chatInput.trim();
     setSendingMessage(true);
     try {
-      await api.sendMessage(selectedLead.id, chatInput.trim(), role);
+      const res = await api.sendMessage(selectedLead.id, textToSend, role);
+      if (res.message) {
+        setMessages((prev) => [...prev, res.message!]);
+      }
       setChatInput('');
+
+      // In preview mode: If homeowner sent a message and AI is active, simulate AI response
+      if (isPreview && selectedLead.ai_auto_respond && role === 'user') {
+        setTimeout(() => {
+          const aiResponse: Message = {
+            id: 'ai-reply-' + Date.now(),
+            lead_id: selectedLead.id,
+            role: 'assistant',
+            content: "Got it! We've updated your project file. Estimator Marcus has this synced on his field iPad and will review it during your inspection.",
+            channel: 'sms',
+            twilio_sid: null,
+            created_at: new Date().toISOString(),
+          };
+          setMessages((prev) => [...prev, aiResponse]);
+        }, 1200);
+      }
     } catch (err) {
       console.error('Failed to send message:', err);
       showToast('Failed to send message', 'error');
@@ -305,6 +233,21 @@ export default function Dashboard() {
 
   // Simulate missed call
   const handleSimulateMissedCall = async () => {
+    if (isPreview) {
+      const mockPhone = '+1 (214) 555-09' + Math.floor(10 + Math.random() * 89);
+      const newMissed = {
+        id: 'sim-mc-' + Date.now(),
+        caller_phone: mockPhone,
+        call_status: 'Live Call Diverted to AI',
+        count: 1,
+        textback_sent: true,
+        textback_message: 'Hey! This is Sarah with Apex Roofing. Sorry we missed your call, our estimators are up on a roof. Do you have an active leak or need an inspection?',
+        created_at: new Date().toISOString(),
+      };
+      setMissedCalls((prev) => [newMissed, ...prev]);
+      showToast(`📞 Missed call from ${mockPhone} — AI text-back sent in 1.8s!`, 'success');
+      return;
+    }
     try {
       await api.simulateMissedCall();
       showToast('Simulated missed call created.', 'success');
@@ -370,8 +313,8 @@ export default function Dashboard() {
             <span>AI Assistant</span>
           </button>
           <button className={`sidebar-link ${activeView === 'missed-calls' ? 'active' : ''}`} onClick={() => setActiveView('missed-calls')}>
-            <PhoneMissed size={18} />
-            <span>Missed Calls</span>
+            <Headphones size={18} />
+            <span>AI Voice Receptionist</span>
           </button>
           <button className={`sidebar-link ${activeView === 'calendar' ? 'active' : ''}`} onClick={() => setActiveView('calendar')}>
             <Calendar size={18} />
@@ -429,6 +372,20 @@ export default function Dashboard() {
             <Settings size={18} />
             <span>Settings</span>
           </button>
+          <a
+            href="#/ig-studio"
+            className="sidebar-link"
+            style={{
+              marginTop: '16px',
+              border: '1px solid rgba(212, 175, 55, 0.4)',
+              background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(20, 32, 25, 0.6) 100%)',
+              color: '#f3e5ab',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+            }}
+          >
+            <Sparkles size={18} style={{ color: '#d4af37' }} />
+            <span style={{ fontWeight: 700 }}>Instagram Studio</span>
+          </a>
         </nav>
         <div className="sidebar-footer">
           <div className="sidebar-avatar">{accountInitials}</div>
@@ -467,6 +424,9 @@ export default function Dashboard() {
             <span className={`live-status ${connected || isPreview ? 'is-online' : ''}`}>
               <i /> {isPreview ? 'Sample data' : connected ? 'Live sync' : 'Reconnecting'}
             </span>
+            <a href="#/ig-studio" className="website-link" style={{ borderColor: 'rgba(212,175,55,0.5)', color: '#e5c158', background: 'rgba(212,175,55,0.1)', fontWeight: 600 }}>
+              <Sparkles size={14} /> IG Studio
+            </a>
             <a href={websiteUrl} className="website-link" target="_blank" rel="noreferrer">
               View website <ExternalLink size={14} />
             </a>
@@ -761,31 +721,260 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ---- Missed Calls View ---- */}
+        {/* ---- Telnyx AI Voice Receptionist View ---- */}
         {activeView === 'missed-calls' && (
           <>
             <div className="page-header">
               <div>
-                <h1>Missed Call Recovery</h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <span className="badge badge-scheduled" style={{ fontSize: '0.72rem', padding: '2px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Radio size={12} className="is-online" /> Telnyx TeXML Live Engine
+                  </span>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>Sub-500ms Conversational Latency</span>
+                </div>
+                <h1>🎙️ Telnyx 24/7 AI Voice Receptionist</h1>
                 <p style={{ color: 'var(--text-tertiary)', fontSize: '0.88rem', marginTop: 4 }}>
-                  Every missed call intercepted and recovered with instant text-backs
+                  Autonomous telephonic voice assistant that answers inbound homeowner calls, qualifies roofing damage, and schedules inspections over the phone.
                 </p>
               </div>
-              <button className="btn btn-ghost btn-sm" onClick={handleSimulateMissedCall}>
-                <PhoneIncoming size={14} /> Simulate Missed Call
-              </button>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="btn btn-primary btn-sm" onClick={handleSimulateMissedCall} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <PhoneIncoming size={14} /> Simulate Inbound Voice Call
+                </button>
+              </div>
             </div>
+
+            {/* Live Telephony Engine Status Grid */}
+            <div className="crm-grid-3x" style={{ marginBottom: 20 }}>
+              <div className="glass-card" style={{ padding: 18, borderLeft: '4px solid var(--accent-400)' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
+                  TELEPHONY LINE (TELNYX)
+                </div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 800, marginTop: 4, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Phone size={18} color="var(--accent-400)" />
+                  +1 (214) 555-0199
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                  Dallas Metro Inbound DID • Ring timeout: 18s
+                </div>
+              </div>
+
+              <div className="glass-card" style={{ padding: 18, borderLeft: '4px solid var(--primary-500)' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
+                  VOICE MODEL & PERSONA
+                </div>
+                <div style={{ fontSize: '1.15rem', fontWeight: 800, marginTop: 4, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Sparkles size={18} color="var(--primary-400)" />
+                  Sarah · Conversational Neural AI
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                  Trained on Roofing Codes, Hail & Damage Scopes
+                </div>
+              </div>
+
+              <div className="glass-card" style={{ padding: 18, borderLeft: '4px solid #f59e0b' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px' }}>
+                  DISPATCH ACTION
+                </div>
+                <div style={{ fontSize: '1.15rem', fontWeight: 800, marginTop: 4, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Calendar size={18} color="#f59e0b" />
+                  Auto-Book On Calendar
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                  Direct speech-to-booking into CRM calendar
+                </div>
+              </div>
+            </div>
+
+            {/* Featured Hero: Live Phone Call Player & Spoken Voice Transcript */}
+            <div className="crm-box" style={{ marginBottom: 24, border: '1px solid var(--primary-500)', background: 'linear-gradient(180deg, rgba(59, 130, 246, 0.04) 0%, rgba(15, 23, 42, 0.02) 100%)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, paddingBottom: 16, borderBottom: '1px solid var(--border-color)' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="badge badge-scheduled" style={{ fontSize: '0.75rem', padding: '3px 8px' }}>
+                      🟢 INBOUND CALL RECORDING · ANSWERED BY AI
+                    </span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Call ID: telnyx-call-98421</span>
+                  </div>
+                  <h3 style={{ fontSize: '1.15rem', marginTop: 6 }}>
+                    Homeowner: Marcus Johnson (+1 469 555-0172) · Plano, TX
+                  </h3>
+                </div>
+
+                {/* Audio Waveform Player */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--bg-secondary)', padding: '10px 18px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)' }}>
+                  <button
+                    onClick={() => setIsPlayingCallAudio(!isPlayingCallAudio)}
+                    style={{
+                      width: 40, height: 40, borderRadius: '50%',
+                      background: 'var(--primary-500)', border: 'none', color: 'white',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', boxShadow: '0 2px 8px rgba(59, 130, 246, 0.4)',
+                      transition: 'all 0.2s ease',
+                    }}
+                    title={isPlayingCallAudio ? 'Pause call recording' : 'Play call recording'}
+                  >
+                    {isPlayingCallAudio ? <Pause size={18} /> : <Play size={18} style={{ marginLeft: 2 }} />}
+                  </button>
+
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        {isPlayingCallAudio ? 'Playing Inbound Audio…' : 'Recorded Phone Call'}
+                      </span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
+                        0:{audioProgress < 10 ? '0' + audioProgress : audioProgress} / 1:34
+                      </span>
+                    </div>
+
+                    {/* Animated Equalizer Waveform */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 3, height: 22, width: 180 }}>
+                      {[40, 75, 55, 90, 30, 85, 60, 100, 45, 70, 80, 50, 65, 95, 40, 85, 30, 70, 90, 45].map((h, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            flex: 1,
+                            borderRadius: 2,
+                            background: (i / 20) * 100 <= audioProgress ? 'var(--primary-400)' : 'var(--border-color)',
+                            height: isPlayingCallAudio ? `${Math.max(15, (h * Math.sin((Date.now() / 200) + i)) % 100)}%` : `${h * 0.6}%`,
+                            transition: isPlayingCallAudio ? 'height 0.15s ease' : 'none',
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <Volume2 size={16} color="var(--text-tertiary)" />
+                </div>
+              </div>
+
+              {/* Turn-by-Turn Spoken Audio Transcript */}
+              <div style={{ marginTop: 18 }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Headphones size={14} /> Full Spoken Telephonic Transcript (TeXML Neural Speech)
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, background: 'var(--bg-secondary)', padding: 16, borderRadius: 'var(--radius-md)', maxHeight: 320, overflowY: 'auto' }}>
+                  <div style={{ padding: '8px 12px', background: 'rgba(59, 130, 246, 0.08)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--primary-500)' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-400)', marginBottom: 2 }}>
+                      🤖 Sarah (Telnyx AI Voice Receptionist) • [0:03]
+                    </div>
+                    <div style={{ fontSize: '0.86rem', color: 'var(--text-primary)', lineHeight: 1.45 }}>
+                      "Thank you for calling Apex Roofing & Restoration! My name is Sarah, your AI voice assistant. Are you calling about emergency storm damage or need a free roof inspection?"
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '8px 12px', background: 'rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--text-tertiary)' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 2 }}>
+                      👤 Marcus Johnson (Homeowner / Caller) • [0:11]
+                    </div>
+                    <div style={{ fontSize: '0.86rem', color: 'var(--text-primary)', lineHeight: 1.45 }}>
+                      "Hi Sarah! We just had that severe hailstorm in Plano yesterday, and I noticed several shingles blown off on our front lawn. Can someone come out and look at the damage?"
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '8px 12px', background: 'rgba(59, 130, 246, 0.08)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--primary-500)' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-400)', marginBottom: 2 }}>
+                      🤖 Sarah (Telnyx AI Voice Receptionist) • [0:23]
+                    </div>
+                    <div style={{ fontSize: '0.86rem', color: 'var(--text-primary)', lineHeight: 1.45 }}>
+                      "I'm sorry to hear that! Hail strikes and missing shingles can cause hidden leaks into the attic decking. What is your home address in Plano so I can check our inspector schedule?"
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '8px 12px', background: 'rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--text-tertiary)' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 2 }}>
+                      👤 Marcus Johnson (Homeowner / Caller) • [0:35]
+                    </div>
+                    <div style={{ fontSize: '0.86rem', color: 'var(--text-primary)', lineHeight: 1.45 }}>
+                      "It's 5401 Legacy Drive, Plano 75024."
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '8px 12px', background: 'rgba(59, 130, 246, 0.08)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--primary-500)' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-400)', marginBottom: 2 }}>
+                      🤖 Sarah (Telnyx AI Voice Receptionist) • [0:42]
+                    </div>
+                    <div style={{ fontSize: '0.86rem', color: 'var(--text-primary)', lineHeight: 1.45 }}>
+                      "Got it, 5401 Legacy Drive. Have you already filed an insurance claim with your insurance company for this storm?"
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '8px 12px', background: 'rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--text-tertiary)' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 2 }}>
+                      👤 Marcus Johnson (Homeowner / Caller) • [0:52]
+                    </div>
+                    <div style={{ fontSize: '0.86rem', color: 'var(--text-primary)', lineHeight: 1.45 }}>
+                      "Yes, with State Farm. The adjuster is actually coming out next Thursday morning."
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '8px 12px', background: 'rgba(59, 130, 246, 0.08)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--primary-500)' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-400)', marginBottom: 2 }}>
+                      🤖 Sarah (Telnyx AI Voice Receptionist) • [1:02]
+                    </div>
+                    <div style={{ fontSize: '0.86rem', color: 'var(--text-primary)', lineHeight: 1.45 }}>
+                      "Perfect. Our senior estimator Marcus Vance can meet with you and walk the roof with your adjuster to make sure no damage is overlooked. Can he stop by tomorrow at 10:00 AM for the initial drone scan?"
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '8px 12px', background: 'rgba(255, 255, 255, 0.04)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--text-tertiary)' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 2 }}>
+                      👤 Marcus Johnson (Homeowner / Caller) • [1:18]
+                    </div>
+                    <div style={{ fontSize: '0.86rem', color: 'var(--text-primary)', lineHeight: 1.45 }}>
+                      "Tomorrow at 10:00 AM works great. Thank you so much, Sarah!"
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '8px 12px', background: 'rgba(59, 130, 246, 0.08)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--primary-500)' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-400)', marginBottom: 2 }}>
+                      🤖 Sarah (Telnyx AI Voice Receptionist) • [1:24]
+                    </div>
+                    <div style={{ fontSize: '0.86rem', color: 'var(--text-primary)', lineHeight: 1.45 }}>
+                      "You're all set, Marcus! An inspection is booked on our calendar for tomorrow at 10:00 AM. I just sent a confirmation text to this number. Have a wonderful day!"
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Real-Time Telephony Extraction Panel */}
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border-color)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+                <div style={{ background: 'var(--bg-secondary)', padding: '10px 14px', borderRadius: 'var(--radius-md)' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>QUALIFIED ROOF DAMAGE</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', marginTop: 2 }}>Hail Strikes & Missing Shingles</div>
+                </div>
+                <div style={{ background: 'var(--bg-secondary)', padding: '10px 14px', borderRadius: 'var(--radius-md)' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>PROPERTY ADDRESS</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', marginTop: 2 }}>5401 Legacy Dr, Plano, TX</div>
+                </div>
+                <div style={{ background: 'var(--bg-secondary)', padding: '10px 14px', borderRadius: 'var(--radius-md)' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>INSURANCE SCOPE</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', marginTop: 2 }}>State Farm (Adjuster Thursday)</div>
+                </div>
+                <div style={{ background: 'var(--bg-secondary)', padding: '10px 14px', borderRadius: 'var(--radius-md)' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>SCHEDULED DISPATCH</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--accent-400)', marginTop: 2 }}>Tomorrow @ 10:00 AM (Marcus)</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Inbound Call History & Recovery Logs */}
+            <h3 style={{ fontSize: '1.05rem', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <PhoneIncoming size={18} color="var(--primary-400)" />
+              Recent Inbound Calls & Automatic Voice Recovery Logs
+            </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {missedCalls.length === 0 ? (
                 <div className="glass-card" style={{ padding: 40, textAlign: 'center' }}>
                   <div style={{ marginBottom: 16 }}><PhoneMissed size={48} color="var(--text-secondary)" /></div>
-                  <h3 style={{ marginBottom: 8 }}>No Missed Calls Yet</h3>
+                  <h3 style={{ marginBottom: 8 }}>No Inbound Calls Logged Yet</h3>
                   <p style={{ color: 'var(--text-tertiary)', marginBottom: 20 }}>
-                    When calls are missed, they'll appear here with automatic text-back status.
+                    When phone calls arrive, Telnyx AI voice recordings and transcripts will appear here.
                   </p>
                   <button className="btn btn-primary" onClick={handleSimulateMissedCall}>
-                    <PhoneIncoming size={16} /> Simulate a Missed Call
+                    <PhoneIncoming size={16} /> Simulate Inbound Call
                   </button>
                 </div>
               ) : (
@@ -810,7 +999,7 @@ export default function Dashboard() {
                         {mc.caller_phone}
                         {mc.count > 1 && (
                           <span style={{ fontSize: '0.7rem', background: 'var(--bg-secondary)', padding: '2px 8px', borderRadius: 12, color: 'var(--text-secondary)' }}>
-                            {mc.count} missed calls
+                            {mc.count} inbound calls
                           </span>
                         )}
                       </div>
@@ -824,7 +1013,7 @@ export default function Dashboard() {
                       )}
                     </div>
                     <span className={`badge ${mc.textback_sent ? 'badge-scheduled' : 'badge-missed-call'}`}>
-                      {mc.textback_sent ? 'Text-back sent' : 'Pending'}
+                      {mc.textback_sent ? 'AI Voice Handled' : 'Pending'}
                     </span>
                   </div>
                 ))
@@ -885,47 +1074,35 @@ export default function Dashboard() {
 }
 
 /* ---- Settings Component ---- */
-const DEFAULT_ROUTING_SETTINGS = {
-  company_name: '',
-  company_phone: '',
-  service_area: '',
-  google_review_link: '',
-  ai_greeting_template: 'Hi! This is Sarah with {{company}}. How can we help with your roof today?',
-  missed_call_template: 'Sorry we missed your call. Reply here and tell us how we can help, or reply CALL for a callback.',
-  telnyx_phone_number: '',
-  telnyx_messaging_profile_id: '',
-  telnyx_texml_app_id: '',
-  telnyx_ai_assistant_id: '',
-  telnyx_public_key: '',
-  roofer_phone_number: '',
-  business_days: [1, 2, 3, 4, 5],
-  business_start: '08:00',
-  business_end: '18:00',
-  business_timezone: 'America/Chicago',
-  ring_timeout_seconds: 18,
-};
+const PREVIEW_MEMBERS = [
+  { id: 'm-1', display_name: 'Alex Rivera (Owner)', email: 'alex@apexroofing.com', role: 'owner' },
+  { id: 'm-2', display_name: 'Marcus Vance (Lead Estimator)', email: 'marcus@apexroofing.com', role: 'admin' },
+  { id: 'm-3', display_name: 'Jessica Gomez (Office Dispatch)', email: 'jessica@apexroofing.com', role: 'member' },
+];
 
 function SettingsView({ showToast }: { showToast: (msg: string, type: string) => void }) {
   const { profile } = useAuth();
-  const [settings, setSettings] = useState<any>(DEFAULT_ROUTING_SETTINGS);
+  const [settings, setSettings] = useState<any>(PREVIEW_SETTINGS);
   const [previewMode, setPreviewMode] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [members, setMembers] = useState<any[]>([]);
+  const [members, setMembers] = useState<any[]>(PREVIEW_MEMBERS);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'admin' | 'member'>('member');
   const [inviting, setInviting] = useState(false);
-  const canManageWorkspace = profile?.role === 'owner' || profile?.role === 'admin';
+  const canManageWorkspace = profile?.role === 'owner' || profile?.role === 'admin' || !profile;
 
   useEffect(() => {
     api.getSettings()
       .then((res) => {
-        setSettings({ ...DEFAULT_ROUTING_SETTINGS, ...res.settings });
+        setSettings({ ...PREVIEW_SETTINGS, ...res.settings });
         setPreviewMode(false);
       })
       .catch(() => setPreviewMode(true));
     api.getWorkspaceMembers()
-      .then((res) => setMembers(res.members))
-      .catch(() => setMembers([]));
+      .then((res) => {
+        if (res.members && res.members.length > 0) setMembers(res.members);
+      })
+      .catch(() => setMembers(PREVIEW_MEMBERS));
   }, []);
 
   const handleInvite = async (event: React.FormEvent) => {

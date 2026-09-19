@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Building2,
   CheckCircle2,
@@ -6,6 +6,7 @@ import {
   ExternalLink,
   LayoutDashboard,
   LogOut,
+  Plus,
   PauseCircle,
   RefreshCw,
   Search,
@@ -84,6 +85,9 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState('');
   const [error, setError] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newClient, setNewClient] = useState({ owner_email: '', owner_name: '', company_name: '', slug: '', company_phone: '', service_area: '', service_zip_codes: '', roofer_phone_number: '', website_goal: '', ad_plan: '' });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -148,6 +152,22 @@ export default function AdminPage() {
     }
   };
 
+  const createClient = async (event: FormEvent) => {
+    event.preventDefault();
+    setCreating(true); setError('');
+    try {
+      await api.createAdminWorkspace({
+        ...newClient,
+        slug: newClient.slug || newClient.company_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+        service_zip_codes: newClient.service_zip_codes.split(',').map((item) => item.trim()).filter(Boolean),
+        onboarding_data: { owner_name: newClient.owner_name, public_email: newClient.owner_email, website_goal: newClient.website_goal, ad_plan: newClient.ad_plan, core_services: ['Roof inspections'] },
+      });
+      setShowCreate(false); setNewClient({ owner_email: '', owner_name: '', company_name: '', slug: '', company_phone: '', service_area: '', service_zip_codes: '', roofer_phone_number: '', website_goal: '', ad_plan: '' });
+      await load();
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not create client workspace'); }
+    finally { setCreating(false); }
+  };
+
   return (
     <main className="platform-admin">
       <header className="platform-admin-header">
@@ -177,10 +197,25 @@ export default function AdminPage() {
             <span>Activate customers after receiving payment, or pause access when needed.</span>
             {isPreview && <em className="platform-preview-label">Interactive preview · no real accounts are changed</em>}
           </div>
-          <button type="button" onClick={() => void load()} disabled={loading}>
-            <RefreshCw size={16} className={loading ? 'spin-icon' : ''} /> Refresh
-          </button>
+          <div className="platform-admin-title-actions"><button type="button" className="platform-create-button" onClick={() => setShowCreate(true)}><Plus size={16} /> Add client manually</button><button type="button" onClick={() => void load()} disabled={loading}><RefreshCw size={16} className={loading ? 'spin-icon' : ''} /> Refresh</button></div>
         </div>
+
+        {showCreate && <form className="platform-create-panel" onSubmit={createClient}>
+          <div className="platform-create-heading"><div><p>Manual client setup</p><h2>Provision a workspace and send the owner an invite</h2></div><button type="button" onClick={() => setShowCreate(false)}>Close</button></div>
+          <div className="platform-create-grid">
+            <label>Owner name<input required value={newClient.owner_name} onChange={(e) => setNewClient({ ...newClient, owner_name: e.target.value })} placeholder="Jordan Blake" /></label>
+            <label>Owner email<input required type="email" value={newClient.owner_email} onChange={(e) => setNewClient({ ...newClient, owner_email: e.target.value })} placeholder="owner@company.com" /></label>
+            <label>Company name<input required value={newClient.company_name} onChange={(e) => setNewClient({ ...newClient, company_name: e.target.value })} placeholder="Summit Exteriors" /></label>
+            <label>Workspace URL<input value={newClient.slug} onChange={(e) => setNewClient({ ...newClient, slug: e.target.value })} placeholder="summit-exteriors" /></label>
+            <label>Business phone<input required value={newClient.company_phone} onChange={(e) => setNewClient({ ...newClient, company_phone: e.target.value })} placeholder="+1..." /></label>
+            <label>Service area<input required value={newClient.service_area} onChange={(e) => setNewClient({ ...newClient, service_area: e.target.value })} placeholder="Dallas–Fort Worth, TX" /></label>
+            <label>ZIP / postal codes<input value={newClient.service_zip_codes} onChange={(e) => setNewClient({ ...newClient, service_zip_codes: e.target.value })} placeholder="75201, 75202" /></label>
+            <label>Call-forwarding number<input value={newClient.roofer_phone_number} onChange={(e) => setNewClient({ ...newClient, roofer_phone_number: e.target.value })} placeholder="Optional" /></label>
+            <label>Website goal<select value={newClient.website_goal} onChange={(e) => setNewClient({ ...newClient, website_goal: e.target.value })}><option value="">Choose later</option><option>Book more roof inspections</option><option>Generate estimate requests</option><option>Win storm-restoration work</option></select></label>
+            <label>Ad plan<select value={newClient.ad_plan} onChange={(e) => setNewClient({ ...newClient, ad_plan: e.target.value })}><option value="">Not sure yet</option><option>Yes, ready to start</option><option>Maybe in the next 3 months</option><option>No, organic marketing only</option></select></label>
+          </div>
+          <div className="platform-create-footer"><span>Creates an isolated workspace, stores the starter profile, and emails the owner an invitation.</span><button type="submit" className="activate" disabled={creating}>{creating ? 'Creating…' : 'Create and invite client'}</button></div>
+        </form>}
 
         <div className="platform-admin-stats">
           <article><Building2 size={19} /><span><strong>{counts.all}</strong><small>All roofers</small></span></article>
@@ -209,6 +244,7 @@ export default function AdminPage() {
                     <strong>{workspace.owner_name || workspace.owner_email || 'Not assigned'}</strong>
                     {workspace.owner_name && <span>{workspace.owner_email}</span>}
                   </div>
+                  <div className="platform-client-insights"><small>Profile</small><span>{workspace.service_area || 'Area not entered'}</span><span>{String(workspace.onboarding_data?.website_goal || 'Website goal not set')}</span><span>{String(workspace.onboarding_data?.ad_plan || 'Ads plan not set')}</span></div>
                   <div className="platform-members">
                     <Users size={15} />
                     <span>{workspace.member_count} user{workspace.member_count === 1 ? '' : 's'}</span>

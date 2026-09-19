@@ -1,12 +1,19 @@
+import { lazy, Suspense } from 'react';
 import { HashRouter, Navigate, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import LandingPage from './pages/LandingPage';
-import Dashboard from './pages/Dashboard';
-import AuthPage from './pages/AuthPage';
-import OnboardingPage from './pages/OnboardingPage';
-import SetPasswordPage from './pages/SetPasswordPage';
-import SubscriptionPage from './pages/SubscriptionPage';
-import AdminPage from './pages/AdminPage';
+
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const AuthPage = lazy(() => import('./pages/AuthPage'));
+const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
+const SetPasswordPage = lazy(() => import('./pages/SetPasswordPage'));
+const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+const InstagramStudioPage = lazy(() => import('./pages/InstagramStudioPage'));
+
+function RouteLoading() {
+  return <div className="app-loading"><span className="spinner" /><p>Loading RoofFlow…</p></div>;
+}
 
 function ProtectedWorkspace({ children }: { children: React.ReactNode }) {
   const { profile, loading } = useAuth();
@@ -45,6 +52,7 @@ function App() {
   return (
     <AuthProvider>
       <HashRouter>
+        <Suspense fallback={<RouteLoading />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<AuthPage />} />
@@ -52,14 +60,17 @@ function App() {
           <Route path="/set-password" element={<SetPasswordPage />} />
           <Route path="/subscription" element={<SubscriptionPage />} />
           <Route path="/admin" element={<ProtectedAdmin><AdminPage /></ProtectedAdmin>} />
-          <Route path="/preview" element={<Dashboard />} />
-          <Route path="/admin-preview" element={<AdminPage />} />
+          {import.meta.env.DEV && <Route path="/preview" element={<Dashboard />} />}
+          {import.meta.env.DEV && <Route path="/admin-preview" element={<AdminPage />} />}
+          <Route path="/ig-studio" element={<ProtectedWorkspace><InstagramStudioPage /></ProtectedWorkspace>} />
+          <Route path="/instagram" element={<ProtectedWorkspace><InstagramStudioPage /></ProtectedWorkspace>} />
           <Route
             path="/dashboard"
             element={<ProtectedWorkspace><Dashboard /></ProtectedWorkspace>}
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </HashRouter>
     </AuthProvider>
   );
