@@ -9,7 +9,6 @@ const OnboardingPage = lazy(() => import('./pages/OnboardingPage'));
 const SetPasswordPage = lazy(() => import('./pages/SetPasswordPage'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
-const InstagramStudioPage = lazy(() => import('./pages/InstagramStudioPage'));
 
 function RouteLoading() {
   return <div className="app-loading"><span className="spinner" /><p>Loading RoofFlow…</p></div>;
@@ -62,8 +61,6 @@ function App() {
           <Route path="/admin" element={<ProtectedAdmin><AdminPage /></ProtectedAdmin>} />
           {import.meta.env.DEV && <Route path="/preview" element={<Dashboard />} />}
           {import.meta.env.DEV && <Route path="/admin-preview" element={<AdminPage />} />}
-          <Route path="/ig-studio" element={<ProtectedWorkspace><InstagramStudioPage /></ProtectedWorkspace>} />
-          <Route path="/instagram" element={<ProtectedWorkspace><InstagramStudioPage /></ProtectedWorkspace>} />
           <Route
             path="/dashboard"
             element={<ProtectedWorkspace><Dashboard /></ProtectedWorkspace>}

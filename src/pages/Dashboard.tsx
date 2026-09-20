@@ -372,20 +372,6 @@ export default function Dashboard() {
             <Settings size={18} />
             <span>Settings</span>
           </button>
-          <a
-            href="#/ig-studio"
-            className="sidebar-link"
-            style={{
-              marginTop: '16px',
-              border: '1px solid rgba(212, 175, 55, 0.4)',
-              background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(20, 32, 25, 0.6) 100%)',
-              color: '#f3e5ab',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-            }}
-          >
-            <Sparkles size={18} style={{ color: '#d4af37' }} />
-            <span style={{ fontWeight: 700 }}>Instagram Studio</span>
-          </a>
         </nav>
         <div className="sidebar-footer">
           <div className="sidebar-avatar">{accountInitials}</div>
@@ -424,9 +410,6 @@ export default function Dashboard() {
             <span className={`live-status ${connected || isPreview ? 'is-online' : ''}`}>
               <i /> {isPreview ? 'Sample data' : connected ? 'Live sync' : 'Reconnecting'}
             </span>
-            <a href="#/ig-studio" className="website-link" style={{ borderColor: 'rgba(212,175,55,0.5)', color: '#e5c158', background: 'rgba(212,175,55,0.1)', fontWeight: 600 }}>
-              <Sparkles size={14} /> IG Studio
-            </a>
             <a href={websiteUrl} className="website-link" target="_blank" rel="noreferrer">
               View website <ExternalLink size={14} />
             </a>
