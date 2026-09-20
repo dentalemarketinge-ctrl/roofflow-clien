@@ -23,10 +23,10 @@ type Channel = {
 };
 
 const initialChannels: Channel[] = [
-  { name: 'Google Business Profile', handle: 'Apex Roofing & Restoration (Plano, TX)', color: '#4285f4', icon: <Store size={21} />, connected: true, added: true, profileUrl: 'https://google.com/maps', detail: '4.9 ★ Rating · 48 Google Reviews · Synced Daily' },
-  { name: 'Facebook', handle: 'Apex Roofing DFW (@apexroofingdfw)', color: '#1877f2', icon: <Facebook size={21} />, connected: true, added: true, profileUrl: 'https://facebook.com/apexroofingdfw', detail: '1,240 Followers · Active Community Page' },
-  { name: 'Instagram', handle: '@apexroofing.dfw', color: '#e1306c', icon: <Instagram size={21} />, connected: true, added: true, detail: 'Share completed project photos & drone reels' },
-  { name: 'YouTube', handle: 'Apex Roofing Productions', color: '#ff0033', icon: <Youtube size={22} />, connected: false, added: false, detail: 'Publish inspections and project videos' },
+  { name: 'Google Business Profile', handle: 'No profile connected', color: '#4285f4', icon: <Store size={21} />, connected: false, added: false, detail: 'Connect your official profile to manage reviews and local search.' },
+  { name: 'Facebook', handle: 'No page connected', color: '#1877f2', icon: <Facebook size={21} />, connected: false, added: false, detail: 'Add your business page before publishing updates.' },
+  { name: 'Instagram', handle: 'No account connected', color: '#e1306c', icon: <Instagram size={21} />, connected: false, added: false, detail: 'Add your business account to plan and publish content.' },
+  { name: 'YouTube', handle: 'No channel connected', color: '#ff0033', icon: <Youtube size={22} />, connected: false, added: false, detail: 'Add your channel when you are ready to publish video.' },
 ];
 
 export const MarketingView: React.FC<MarketingViewProps> = ({ showToast }) => {

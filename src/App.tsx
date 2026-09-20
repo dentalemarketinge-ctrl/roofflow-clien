@@ -59,6 +59,7 @@ function App() {
           <Route path="/set-password" element={<SetPasswordPage />} />
           <Route path="/subscription" element={<SubscriptionPage />} />
           <Route path="/admin" element={<ProtectedAdmin><AdminPage /></ProtectedAdmin>} />
+          {import.meta.env.DEV && <Route path="/onboarding-preview" element={<OnboardingPage preview />} />}
           {import.meta.env.DEV && <Route path="/preview" element={<Dashboard />} />}
           {import.meta.env.DEV && <Route path="/admin-preview" element={<AdminPage />} />}
           <Route

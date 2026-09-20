@@ -9,7 +9,7 @@ const SERVICES = ['Roof replacement', 'Roof repair', 'Storm restoration', 'Emerg
 const TOTAL_STEPS = 14;
 type Details = Record<string, string | string[]>;
 
-export default function OnboardingPage() {
+export default function OnboardingPage({ preview = false }: { preview?: boolean }) {
   const { profile, loading, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -29,8 +29,8 @@ export default function OnboardingPage() {
   const suggestedSlug = useMemo(() => companyName.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), [companyName]);
   const percentage = Math.round((step / TOTAL_STEPS) * 100);
   const services = (details.core_services || []) as string[];
-  if (!loading && !profile) return <Navigate to="/login" replace />;
-  if (profile?.organization) return <Navigate to="/dashboard" replace />;
+  if (!preview && !loading && !profile) return <Navigate to="/login" replace />;
+  if (!preview && profile?.organization) return <Navigate to="/dashboard" replace />;
   const setDetail = (key: string, value: string) => setDetails((current) => ({ ...current, [key]: value }));
   const toggleService = (service: string) => setDetails((current) => { const selected = (current.core_services || []) as string[]; return { ...current, core_services: selected.includes(service) ? selected.filter((item) => item !== service) : [...selected, service] }; });
   const validStep = () => {
@@ -47,6 +47,7 @@ export default function OnboardingPage() {
     event.preventDefault();
     if (step < TOTAL_STEPS) { next(); return; }
     if (!validStep()) { setError('Please complete this question before continuing.'); return; }
+    if (preview) { setError('Preview mode: this form will not create a workspace.'); return; }
     setSubmitting(true); setError('');
     try {
       await api.createWorkspace({ company_name: companyName, slug: slug || suggestedSlug, company_phone: companyPhone, service_area: serviceArea, service_zip_codes: serviceZipCodes.split(',').map((code) => code.trim()).filter(Boolean), roofer_phone_number: rooferPhoneNumber, business_days: businessDays, business_start: businessStart, business_end: businessEnd, business_timezone: timezone, onboarding_data: details });
