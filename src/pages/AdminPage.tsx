@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Building2,
   CheckCircle2,
+  ClipboardList,
   Clock3,
   ExternalLink,
   LayoutDashboard,
@@ -32,6 +33,10 @@ const PREVIEW_WORKSPACES: AdminWorkspace[] = [
     member_count: 6,
     company_phone: '+1 (214) 555-0199',
     telnyx_phone_number: '+1 (757) 540-3912',
+    service_area: 'Dallas–Fort Worth, TX',
+    service_zip_codes: ['75001', '75201'],
+    roofer_phone_number: '+1 (214) 555-0199',
+    onboarding_data: { core_services: ['Roof replacement', 'Storm restoration'], website_goal: 'Book more roof inspections', ad_plan: 'Yes, ready to start', brand_style: 'Premium and polished', brand_notes: 'Navy, gold, and white.' },
   },
   {
     id: 'preview-summit',
@@ -86,6 +91,7 @@ export default function AdminPage() {
   const [updatingId, setUpdatingId] = useState('');
   const [error, setError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [detailsWorkspaceId, setDetailsWorkspaceId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [newClient, setNewClient] = useState({ owner_email: '', owner_name: '', company_name: '', slug: '', company_phone: '', service_area: '', service_zip_codes: '', roofer_phone_number: '', website_goal: '', ad_plan: '' });
 
@@ -233,6 +239,16 @@ export default function AdminPage() {
           <div className="platform-workspace-list">
             {visibleWorkspaces.map(workspace => {
               const busy = updatingId === workspace.id;
+              const detailsOpen = detailsWorkspaceId === workspace.id;
+              const onboardingEntries = Object.entries(workspace.onboarding_data || {})
+                .filter(([, value]) => value !== null && value !== undefined && value !== '' && (!Array.isArray(value) || value.length > 0));
+              const details = [
+                ['Business phone', workspace.company_phone],
+                ['Service area', workspace.service_area],
+                ['ZIP / postal codes', workspace.service_zip_codes?.join(', ')],
+                ['Call-forwarding number', workspace.roofer_phone_number],
+                ...onboardingEntries.map(([key, value]) => [key.replace(/_/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase()), Array.isArray(value) ? value.join(', ') : String(value)]),
+              ].filter(([, value]) => Boolean(value)) as Array<[string, string]>;
               return (
                 <article className="platform-workspace-row" key={workspace.id}>
                   <div className="platform-company">
@@ -258,6 +274,14 @@ export default function AdminPage() {
                     )}
                   </div>
                   <div className="platform-actions">
+                    <button
+                      type="button"
+                      className="platform-details-button"
+                      aria-expanded={detailsOpen}
+                      onClick={() => setDetailsWorkspaceId(current => current === workspace.id ? null : workspace.id)}
+                    >
+                      <ClipboardList size={13} /> {detailsOpen ? 'Hide details' : 'Onboarding details'}
+                    </button>
                     <a href={`/?org=${encodeURIComponent(workspace.slug)}`} target="_blank" rel="noreferrer">
                       Website <ExternalLink size={13} />
                     </a>
@@ -275,6 +299,22 @@ export default function AdminPage() {
                       +14-day trial
                     </button>
                   </div>
+                  {detailsOpen && (
+                    <section className="platform-onboarding-details" aria-label={`${workspace.name} onboarding details`}>
+                      <div className="platform-onboarding-heading">
+                        <div>
+                          <small>Client questionnaire</small>
+                          <strong>{workspace.name} onboarding details</strong>
+                        </div>
+                        <button type="button" onClick={() => setDetailsWorkspaceId(null)}>Close</button>
+                      </div>
+                      {details.length ? (
+                        <dl className="platform-onboarding-grid">
+                          {details.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+                        </dl>
+                      ) : <p>No onboarding answers have been submitted yet.</p>}
+                    </section>
+                  )}
                 </article>
               );
             })}
